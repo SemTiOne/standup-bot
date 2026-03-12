@@ -207,7 +207,7 @@ def test_provider_config_valid_ollama():
     cfg = {
         "name": "ollama",
         "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-        "groq": {"api_key": "", "model": "llama3-8b-8192"},
+        "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
     }
     ok, msg = validate_provider_config(cfg)
     assert ok, msg
@@ -217,7 +217,7 @@ def test_provider_config_valid_groq():
     cfg = {
         "name": "groq",
         "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-        "groq": {"api_key": "", "model": "llama3-8b-8192"},
+        "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
     }
     ok, msg = validate_provider_config(cfg)
     assert ok, msg
@@ -227,7 +227,7 @@ def test_provider_config_unknown_name():
     cfg = {
         "name": "openai",
         "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-        "groq": {"api_key": "", "model": "llama3-8b-8192"},
+        "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
     }
     ok, _ = validate_provider_config(cfg)
     assert not ok
@@ -237,7 +237,7 @@ def test_provider_config_ollama_invalid_base_url():
     cfg = {
         "name": "ollama",
         "ollama": {"base_url": "not-a-url", "model": "llama3"},
-        "groq": {"api_key": "", "model": "llama3-8b-8192"},
+        "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
     }
     ok, _ = validate_provider_config(cfg)
     assert not ok
@@ -247,7 +247,7 @@ def test_provider_config_ollama_empty_model():
     cfg = {
         "name": "ollama",
         "ollama": {"base_url": "http://localhost:11434", "model": ""},
-        "groq": {"api_key": "", "model": "llama3-8b-8192"},
+        "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
     }
     ok, _ = validate_provider_config(cfg)
     assert not ok
@@ -268,7 +268,7 @@ def test_provider_config_groq_empty_api_key_allowed():
     cfg = {
         "name": "groq",
         "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-        "groq": {"api_key": "", "model": "llama3-8b-8192"},
+        "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
     }
     ok, msg = validate_provider_config(cfg)
     assert ok, msg
@@ -366,7 +366,7 @@ def _make_valid_config(tmp_path) -> dict:
         "provider": {
             "name": "ollama",
             "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-            "groq": {"api_key": "", "model": "llama3-8b-8192"},
+            "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
         },
         "rate_limit": {"cooldown_minutes": 30, "max_calls_per_day": 10, "enabled": True},
     }
@@ -409,7 +409,7 @@ def test_setup_input_tone():
 
 
 def test_setup_input_groq_model_valid():
-    ok, _ = validate_setup_input("groq_model", "llama3-8b-8192")
+    ok, _ = validate_setup_input("groq_model", "llama-3.1-8b-instant")
     assert ok
 
 

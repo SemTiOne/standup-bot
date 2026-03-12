@@ -14,11 +14,11 @@ from standup.git_reader import get_recent_commits, _infer_modules
 
 
 def test_infer_modules_nested():
-    files = ["src/auth/login.py", "src/models/user.py", "tests/test_auth.py"]
+    files = ["src/auth/login.py", "src/models/user.py", "tests/unit/test_auth.py"]
     modules = _infer_modules(files)
     assert "auth" in modules
     assert "models" in modules
-    assert "tests" in modules
+    assert "unit" in modules
 
 
 def test_infer_modules_top_level():

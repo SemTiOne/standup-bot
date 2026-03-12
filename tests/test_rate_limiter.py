@@ -118,14 +118,16 @@ def test_record_call_first_call_of_day():
 
 
 def test_save_and_load_usage(tmp_path, monkeypatch):
+    from datetime import date
     path = str(tmp_path / ".standup_usage.json")
     monkeypatch.setattr("standup.rate_limiter.USAGE_PATH", path)
 
-    usage = {"last_call": "2024-01-15T10:00:00", "daily": {"2024-01-15": 3}}
+    today = date.today().isoformat()
+    usage = {"last_call": f"{today}T10:00:00", "daily": {today: 3}}
     save_usage(usage)
 
     loaded = load_usage()
-    assert loaded["daily"]["2024-01-15"] == 3
+    assert loaded["daily"][today] == 3
 
 
 def test_load_usage_missing_file(tmp_path, monkeypatch):
