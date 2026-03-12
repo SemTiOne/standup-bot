@@ -1,0 +1,14 @@
+.standup.json
+.standup_usage.json
+__pycache__/
+*.pyc
+.env
+.env.*
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.venv/
+venv/
+*.pyo
+.DS_Store
