@@ -1,0 +1,53 @@
+# --- StandupBot .gitignore ---
+
+# User-specific config and runtime data (never commit these)
+.standup.json
+.standup_usage.json
+.standup_history.db
+.standup_history.db-wal
+.standup_history.db-shm
+.standup.log
+.standup.log.*
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*$py.class
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+*.egg
+MANIFEST
+
+# Environment
+.env
+.env.*
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary fix artifacts
+apply_fixes.py
+REPORT.md
+CODEX_PROMPT_v0.2.0.md
+CODEX_PROMPT_v0.2.1.md
+devto-article.md
