@@ -227,19 +227,22 @@ def generate_with_quality_retry(
     standup_text = provider.generate_standup(current_prompt, tone)
     quality = score_standup(standup_text, provider)
 
-    while int(quality.get("score", 0)) < int(min_score) and retries < max_retries:
+    while int(quality.get("score") or 0) < int(min_score) and retries < max_retries:  # type: ignore[call-overload]
         retries += 1
         issues = quality.get("issues", [])
         guidance_lines: List[str] = []
         if isinstance(issues, list) and issues:
-            guidance_lines.extend("- {0}".format(issue) for issue in issues)
+            guidance_lines.extend(f"- {issue}" for issue in issues)
         else:
-            guidance_lines.append("- Improve specificity, completeness, clarity, and actionability.")
+            guidance_lines.append(
+                "- Improve specificity, completeness, clarity, and actionability."
+            )
 
+        joined_guidance = "\n".join(guidance_lines)
         current_prompt = (
             "Please revise the standup so it fixes these quality issues:\n"
-            "{0}\n\nOriginal request:\n{1}"
-        ).format("\n".join(guidance_lines), prompt)
+            f"{joined_guidance}\n\nOriginal request:\n{prompt}"
+        )
         standup_text = provider.generate_standup(current_prompt, tone)
         quality = score_standup(standup_text, provider)
 

@@ -26,10 +26,14 @@ ignore = [
     "UP007", # keep Union[X, Y] for Python 3.9 compatibility
     "UP035", # keep typing module imports for Python 3.9 compatibility
     "N802",  # function name should be lowercase — some test helpers use UPPER
+    # E501: long lines are intentional in user-facing strings, argparse help
+    # text, regex patterns, and XML/plist templates. Wrapping them reduces
+    # readability without improving correctness or security.
+    "E501",
 ]
 
 [lint.per-file-ignores]
-"tests/*" = ["S", "N", "E501"]
+"tests/*" = ["S", "N"]
 
 [format]
 quote-style = "double"

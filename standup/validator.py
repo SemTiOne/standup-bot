@@ -123,7 +123,7 @@ def validate_path_safety(path: str) -> Tuple[bool, str]:
     if "\x00" in path:
         return False, "Path must not contain null bytes."
     if len(path) > MAX_PATH_LENGTH:
-        return False, "Path exceeds maximum length of {0} characters.".format(MAX_PATH_LENGTH)
+        return False, f"Path exceeds maximum length of {MAX_PATH_LENGTH} characters."
 
     stripped = path.strip()
     if stripped.startswith("\\\\") or stripped.startswith("//"):
@@ -132,7 +132,7 @@ def validate_path_safety(path: str) -> Tuple[bool, str]:
     sanitized = sanitize_path(stripped)
     candidate = Path(sanitized)
     if not candidate.is_absolute():
-        return False, "Path must be absolute: {0}".format(path)
+        return False, f"Path must be absolute: {path}"
 
     try:
         resolved = candidate.resolve()
@@ -197,11 +197,11 @@ def validate_repo_path(path: str) -> Tuple[bool, str]:
 
     repo_path = Path(sanitize_path(str(path)))
     if not repo_path.exists():
-        return False, "Repo path does not exist: {0}".format(path)
+        return False, f"Repo path does not exist: {path}"
     if not repo_path.is_dir():
-        return False, "Repo path is not a directory: {0}".format(path)
+        return False, f"Repo path is not a directory: {path}"
     if not (repo_path / ".git").exists():
-        return False, "Directory is not a git repository (no .git found): {0}".format(path)
+        return False, f"Directory is not a git repository (no .git found): {path}"
     return True, ""
 
 
@@ -222,7 +222,7 @@ def validate_author_email(email: str) -> Tuple[bool, str]:
         return True, ""
     if _EMAIL_RE.match(str(email)):
         return True, ""
-    return False, "Invalid email format: {0!r}".format(email)
+    return False, f"Invalid email format: {email!r}"
 
 
 def validate_hours_lookback(value: Any) -> Tuple[bool, str]:
@@ -241,13 +241,11 @@ def validate_hours_lookback(value: Any) -> Tuple[bool, str]:
     try:
         hours = int(value)
     except (TypeError, ValueError):
-        return False, "hours_lookback must be an integer, got: {0!r}".format(value)
+        return False, f"hours_lookback must be an integer, got: {value!r}"
     if hours < 1 or hours > MAX_HOURS_LOOKBACK:
         return (
             False,
-            "hours_lookback must be between 1 and {0}, got: {1}".format(
-                MAX_HOURS_LOOKBACK, hours
-            ),
+            f"hours_lookback must be between 1 and {MAX_HOURS_LOOKBACK}, got: {hours}",
         )
     return True, ""
 
@@ -266,10 +264,10 @@ def validate_tone(value: str) -> Tuple[bool, str]:
         None.
     """
     if not isinstance(value, str):
-        return False, "tone must be a string, got: {0}".format(type(value).__name__)
+        return False, f"tone must be a string, got: {type(value).__name__}"
     if value.strip().lower() in VALID_TONES:
         return True, ""
-    return False, "tone must be one of {0}, got: {1!r}".format(VALID_TONES, value)
+    return False, f"tone must be one of {VALID_TONES}, got: {value!r}"
 
 
 def validate_slack_webhook(url: str) -> Tuple[bool, str]:
@@ -291,7 +289,7 @@ def validate_slack_webhook(url: str) -> Tuple[bool, str]:
         return True, ""
     return (
         False,
-        "slack_webhook_url must start with 'https://hooks.slack.com/', got: {0!r}".format(url),
+        f"slack_webhook_url must start with 'https://hooks.slack.com/', got: {url!r}",
     )
 
 
@@ -311,7 +309,7 @@ def validate_boolean(value: Any, field_name: str) -> Tuple[bool, str]:
     """
     if isinstance(value, bool):
         return True, ""
-    return False, "{0} must be a boolean.".format(field_name)
+    return False, f"{field_name} must be a boolean."
 
 
 def validate_rate_limit_config(rate_config: Any) -> Tuple[bool, str]:
@@ -337,25 +335,21 @@ def validate_rate_limit_config(rate_config: Any) -> Tuple[bool, str]:
         errors.append(msg)
 
     try:
-        cooldown = int(rate_config.get("cooldown_minutes"))
+        cooldown = int(rate_config.get("cooldown_minutes") or 0)  # type: ignore[arg-type]
         if cooldown < 0 or cooldown > 1440:
             errors.append("rate_limit.cooldown_minutes must be between 0 and 1440.")
     except (TypeError, ValueError):
         errors.append(
-            "rate_limit.cooldown_minutes must be an integer, got: {0!r}".format(
-                rate_config.get("cooldown_minutes")
-            )
+            f"rate_limit.cooldown_minutes must be an integer, got: {rate_config.get('cooldown_minutes')!r}"
         )
 
     try:
-        max_calls = int(rate_config.get("max_calls_per_day"))
+        max_calls = int(rate_config.get("max_calls_per_day") or 0)  # type: ignore[arg-type]
         if max_calls < 1 or max_calls > 50:
             errors.append("rate_limit.max_calls_per_day must be between 1 and 50.")
     except (TypeError, ValueError):
         errors.append(
-            "rate_limit.max_calls_per_day must be an integer, got: {0!r}".format(
-                rate_config.get("max_calls_per_day")
-            )
+            f"rate_limit.max_calls_per_day must be an integer, got: {rate_config.get('max_calls_per_day')!r}"
         )
 
     return (False, " | ".join(errors)) if errors else (True, "")
@@ -379,9 +373,7 @@ def validate_provider_config(provider_config: Any) -> Tuple[bool, str]:
 
     name = provider_config.get("name", "")
     if name not in VALID_PROVIDERS:
-        return False, "provider.name must be one of {0}, got: {1!r}".format(
-            VALID_PROVIDERS, name
-        )
+        return False, f"provider.name must be one of {VALID_PROVIDERS}, got: {name!r}"
 
     errors: List[str] = []
 
@@ -391,9 +383,7 @@ def validate_provider_config(provider_config: Any) -> Tuple[bool, str]:
     else:
         base_url = ollama_cfg.get("base_url", "")
         if not _URL_RE.match(str(base_url)):
-            errors.append(
-                "provider.ollama.base_url must be a valid URL, got: {0!r}".format(base_url)
-            )
+            errors.append(f"provider.ollama.base_url must be a valid URL, got: {base_url!r}")
         model = ollama_cfg.get("model", "")
         if not isinstance(model, str) or not model.strip():
             errors.append("provider.ollama.model must be a non-empty string.")
@@ -405,9 +395,7 @@ def validate_provider_config(provider_config: Any) -> Tuple[bool, str]:
         groq_model = groq_cfg.get("model", "")
         if groq_model not in KNOWN_GROQ_MODELS:
             errors.append(
-                "provider.groq.model must be one of {0}, got: {1!r}".format(
-                    KNOWN_GROQ_MODELS, groq_model
-                )
+                f"provider.groq.model must be one of {KNOWN_GROQ_MODELS}, got: {groq_model!r}"
             )
         api_key = groq_cfg.get("api_key", "")
         if api_key and (not isinstance(api_key, str) or not api_key.startswith("gsk_")):
@@ -443,14 +431,12 @@ def validate_quality_config(quality_config: Any) -> Tuple[bool, str]:
         errors.append(msg)
 
     try:
-        min_score = int(quality_config.get("min_score"))
+        min_score = int(quality_config.get("min_score") or 0)  # type: ignore[arg-type]
         if min_score < 0 or min_score > 100:
             errors.append("quality.min_score must be between 0 and 100.")
     except (TypeError, ValueError):
         errors.append(
-            "quality.min_score must be an integer, got: {0!r}".format(
-                quality_config.get("min_score")
-            )
+            f"quality.min_score must be an integer, got: {quality_config.get('min_score')!r}"
         )
 
     return (False, " | ".join(errors)) if errors else (True, "")
@@ -474,7 +460,7 @@ def validate_template_string(template_str: Any) -> Tuple[bool, str]:
     if not template_str.strip():
         return False, "Template must not be empty."
     if len(template_str) > MAX_TEMPLATE_LENGTH:
-        return False, "Template must be {0} characters or fewer.".format(MAX_TEMPLATE_LENGTH)
+        return False, f"Template must be {MAX_TEMPLATE_LENGTH} characters or fewer."
     if "{{" in template_str or "}}" in template_str:
         return False, "Template must not contain nested braces."
     if _INVALID_TEMPLATE_SYNTAX_RE.search(template_str):
@@ -484,9 +470,9 @@ def validate_template_string(template_str: Any) -> Tuple[bool, str]:
     if not tokens:
         return False, "Template must contain at least one valid {variable} placeholder."
 
-    invalid = sorted(set(token for token in tokens if token not in VALID_TEMPLATE_VARIABLES))
+    invalid = sorted({token for token in tokens if token not in VALID_TEMPLATE_VARIABLES})
     if invalid:
-        return False, "Template contains unsupported variables: {0}".format(", ".join(invalid))
+        return False, f"Template contains unsupported variables: {', '.join(invalid)}"
     return True, ""
 
 
@@ -508,9 +494,7 @@ def validate_custom_templates_config(custom_templates: Any) -> Tuple[bool, str]:
     if len(custom_templates) > MAX_CUSTOM_TEMPLATES:
         return (
             False,
-            "custom_templates must contain at most {0} templates.".format(
-                MAX_CUSTOM_TEMPLATES
-            ),
+            f"custom_templates must contain at most {MAX_CUSTOM_TEMPLATES} templates.",
         )
 
     errors: List[str] = []
@@ -522,7 +506,7 @@ def validate_custom_templates_config(custom_templates: Any) -> Tuple[bool, str]:
             continue
         ok, msg = validate_template_string(template_str)
         if not ok:
-            errors.append("custom_templates.{0}: {1}".format(name, msg))
+            errors.append(f"custom_templates.{name}: {msg}")
 
     return (False, " | ".join(errors)) if errors else (True, "")
 
@@ -550,7 +534,7 @@ def validate_template_name(
         available.update(custom_templates.keys())
     if template_name in available:
         return True, ""
-    return False, "template must be one of {0}, got: {1!r}".format(sorted(available), template_name)
+    return False, f"template must be one of {sorted(available)}, got: {template_name!r}"
 
 
 def validate_resource_limits(config: dict) -> Tuple[bool, List[str]]:
@@ -569,15 +553,11 @@ def validate_resource_limits(config: dict) -> Tuple[bool, List[str]]:
     errors: List[str] = []
     repos = config.get("repos", [])
     if isinstance(repos, list) and len(repos) > MAX_REPO_COUNT:
-        errors.append("repos must contain at most {0} entries.".format(MAX_REPO_COUNT))
+        errors.append(f"repos must contain at most {MAX_REPO_COUNT} entries.")
 
     custom_templates = config.get("custom_templates", {})
     if isinstance(custom_templates, dict) and len(custom_templates) > MAX_CUSTOM_TEMPLATES:
-        errors.append(
-            "custom_templates must contain at most {0} entries.".format(
-                MAX_CUSTOM_TEMPLATES
-            )
-        )
+        errors.append(f"custom_templates must contain at most {MAX_CUSTOM_TEMPLATES} entries.")
 
     ok, msg = validate_hours_lookback(config.get("hours_lookback", 24))
     if not ok:
@@ -621,9 +601,7 @@ def validate_provider_arg(value: str) -> str:
     lowered = str(value).lower()
     if lowered in VALID_PROVIDERS:
         return lowered
-    raise argparse.ArgumentTypeError(
-        "--provider must be 'ollama' or 'groq', got: {0!r}".format(value)
-    )
+    raise argparse.ArgumentTypeError(f"--provider must be 'ollama' or 'groq', got: {value!r}")
 
 
 def validate_positive_int_arg(
@@ -648,12 +626,10 @@ def validate_positive_int_arg(
         parsed = int(value)
     except (TypeError, ValueError):
         raise argparse.ArgumentTypeError(
-            "{0} must be an integer, got: {1!r}".format(field_name, value)
-        )
+            f"{field_name} must be an integer, got: {value!r}"
+        ) from None
     if parsed < minimum or parsed > maximum:
-        raise argparse.ArgumentTypeError(
-            "{0} must be between {1} and {2}.".format(field_name, minimum, maximum)
-        )
+        raise argparse.ArgumentTypeError(f"{field_name} must be between {minimum} and {maximum}.")
     return parsed
 
 
@@ -682,19 +658,23 @@ def validate_cli_args(args: argparse.Namespace, config: dict) -> List[str]:
             errors.append("--slack requires slack_webhook_url to be set in config.")
 
     if getattr(args, "template", None):
-        ok, msg = validate_template_name(getattr(args, "template"), config.get("custom_templates", {}))
+        ok, msg = validate_template_name(args.template, config.get("custom_templates", {}))
         if not ok:
             errors.append(msg)
 
-    if getattr(args, "command", "") == "history":
-        if getattr(args, "clear", False) and getattr(args, "limit", None) not in (None, 10):
-            errors.append("--limit cannot be combined with history --clear.")
+    if (
+        getattr(args, "command", "") == "history"
+        and getattr(args, "clear", False)
+        and getattr(args, "limit", None) not in (None, 10)
+    ):
+        errors.append("--limit cannot be combined with history --clear.")
 
-    if getattr(args, "command", "") == "warm-up":
-        if getattr(args, "install_startup", False) and getattr(
-            args, "uninstall_startup", False
-        ):
-            errors.append("--install-startup and --uninstall-startup are mutually exclusive.")
+    if (
+        getattr(args, "command", "") == "warm-up"
+        and getattr(args, "install_startup", False)
+        and getattr(args, "uninstall_startup", False)
+    ):
+        errors.append("--install-startup and --uninstall-startup are mutually exclusive.")
 
     return errors
 
@@ -721,45 +701,47 @@ def validate_full_config(config: dict) -> Tuple[bool, List[str]]:
         for repo in repos:
             ok, msg = validate_repo_path(repo)
             if not ok:
-                errors.append("repos: {0}".format(msg))
+                errors.append(f"repos: {msg}")
 
     ok, msg = validate_author_email(config.get("author_email", ""))
     if not ok:
-        errors.append("author_email: {0}".format(msg))
+        errors.append(f"author_email: {msg}")
 
     ok, msg = validate_hours_lookback(config.get("hours_lookback", 24))
     if not ok:
-        errors.append("hours_lookback: {0}".format(msg))
+        errors.append(f"hours_lookback: {msg}")
 
     ok, msg = validate_tone(config.get("tone", "casual"))
     if not ok:
-        errors.append("tone: {0}".format(msg))
+        errors.append(f"tone: {msg}")
 
     ok, msg = validate_slack_webhook(config.get("slack_webhook_url", ""))
     if not ok:
-        errors.append("slack_webhook_url: {0}".format(msg))
+        errors.append(f"slack_webhook_url: {msg}")
 
     ok, msg = validate_provider_config(config.get("provider", {}))
     if not ok:
-        errors.append("provider: {0}".format(msg))
+        errors.append(f"provider: {msg}")
 
     ok, msg = validate_rate_limit_config(config.get("rate_limit", {}))
     if not ok:
-        errors.append("rate_limit: {0}".format(msg))
+        errors.append(f"rate_limit: {msg}")
 
     ok, msg = validate_quality_config(
         config.get("quality", {"enabled": True, "min_score": 0, "show_breakdown": False})
     )
     if not ok:
-        errors.append("quality: {0}".format(msg))
+        errors.append(f"quality: {msg}")
 
-    ok, msg = validate_template_name(config.get("template", "default"), config.get("custom_templates", {}))
+    ok, msg = validate_template_name(
+        config.get("template", "default"), config.get("custom_templates", {})
+    )
     if not ok:
-        errors.append("template: {0}".format(msg))
+        errors.append(f"template: {msg}")
 
     ok, msg = validate_custom_templates_config(config.get("custom_templates", {}))
     if not ok:
-        errors.append("custom_templates: {0}".format(msg))
+        errors.append(f"custom_templates: {msg}")
 
     ok, msg = validate_boolean(config.get("noise_filter_enabled", True), "noise_filter_enabled")
     if not ok:
@@ -812,7 +794,7 @@ def validate_setup_input(field: str, raw_input: str) -> Tuple[bool, str]:
     }
     validator = dispatch.get(field)
     if validator is None:
-        return False, "Unknown field: {0!r}".format(field)
+        return False, f"Unknown field: {field!r}"
     return validator(raw_input)
 
 
@@ -820,7 +802,7 @@ def _validate_cooldown_minutes(value: str) -> Tuple[bool, str]:
     try:
         parsed = int(value)
     except (TypeError, ValueError):
-        return False, "cooldown_minutes must be an integer, got: {0!r}".format(value)
+        return False, f"cooldown_minutes must be an integer, got: {value!r}"
     if parsed < 0 or parsed > 1440:
         return False, "cooldown_minutes must be between 0 and 1440."
     return True, ""
@@ -830,7 +812,7 @@ def _validate_max_calls(value: str) -> Tuple[bool, str]:
     try:
         parsed = int(value)
     except (TypeError, ValueError):
-        return False, "max_calls_per_day must be an integer, got: {0!r}".format(value)
+        return False, f"max_calls_per_day must be an integer, got: {value!r}"
     if parsed < 1 or parsed > 50:
         return False, "max_calls_per_day must be between 1 and 50."
     return True, ""
@@ -840,7 +822,7 @@ def _validate_provider_name(value: str) -> Tuple[bool, str]:
     lowered = sanitize_string(value).lower()
     if lowered in VALID_PROVIDERS:
         return True, ""
-    return False, "provider must be one of {0}, got: {1!r}".format(VALID_PROVIDERS, value)
+    return False, f"provider must be one of {VALID_PROVIDERS}, got: {value!r}"
 
 
 def _validate_ollama_model(value: str) -> Tuple[bool, str]:
@@ -854,14 +836,14 @@ def _validate_ollama_base_url(value: str) -> Tuple[bool, str]:
     normalized = sanitize_string(value)
     if _URL_RE.match(normalized):
         return True, ""
-    return False, "ollama base_url must be a valid URL, got: {0!r}".format(normalized)
+    return False, f"ollama base_url must be a valid URL, got: {normalized!r}"
 
 
 def _validate_groq_model(value: str) -> Tuple[bool, str]:
     normalized = sanitize_string(value)
     if normalized in KNOWN_GROQ_MODELS:
         return True, ""
-    return False, "groq model must be one of {0}, got: {1!r}".format(KNOWN_GROQ_MODELS, normalized)
+    return False, f"groq model must be one of {KNOWN_GROQ_MODELS}, got: {normalized!r}"
 
 
 def _validate_groq_api_key_field(value: str) -> Tuple[bool, str]:
@@ -884,7 +866,7 @@ def _validate_quality_min_score(value: str) -> Tuple[bool, str]:
     try:
         parsed = int(value)
     except (TypeError, ValueError):
-        return False, "quality.min_score must be an integer, got: {0!r}".format(value)
+        return False, f"quality.min_score must be an integer, got: {value!r}"
     if parsed < 0 or parsed > 100:
         return False, "quality.min_score must be between 0 and 100."
     return True, ""

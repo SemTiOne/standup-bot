@@ -13,8 +13,8 @@ import requests
 from rich.console import Console
 from rich.status import Status
 
-from standup.logger import log_event
 from standup.llm.groq_provider import GroqProvider
+from standup.logger import log_event
 from standup.security import sanitize_error_message
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ def warm_up_ollama(provider: "OllamaProvider", verbose: bool = False) -> bool:
             console=console,
         ):
             response = requests.post(
-                "{0}/api/generate".format(provider.base_url),
+                f"{provider.base_url}/api/generate",
                 json={
                     "model": provider.model,
                     "prompt": "Respond with the single word READY.",
@@ -60,11 +60,7 @@ def warm_up_ollama(provider: "OllamaProvider", verbose: bool = False) -> bool:
     except Exception as exc:
         log_event("warm_up_completed", provider="ollama", duration_ms=0, success=False)
         if verbose:
-            console.print(
-                "[yellow]⚠️  Warm-up failed: {0}[/yellow]".format(
-                    sanitize_error_message(exc)
-                )
-            )
+            console.print(f"[yellow]⚠️  Warm-up failed: {sanitize_error_message(exc)}[/yellow]")
         return False
 
     elapsed = time.perf_counter() - started
@@ -75,12 +71,10 @@ def warm_up_ollama(provider: "OllamaProvider", verbose: bool = False) -> bool:
         success=success,
     )
     if success and verbose:
-        console.print("[green]✅ Warm-up complete in {0:.2f}s[/green]".format(elapsed))
+        console.print(f"[green]✅ Warm-up complete in {elapsed:.2f}s[/green]")
     elif not success and verbose:
         console.print(
-            "[yellow]⚠️  Warm-up request returned status {0} after {1:.2f}s[/yellow]".format(
-                response.status_code, elapsed
-            )
+            f"[yellow]⚠️  Warm-up request returned status {response.status_code} after {elapsed:.2f}s[/yellow]"
         )
     return success
 
@@ -99,7 +93,7 @@ def is_model_warm(provider: "OllamaProvider") -> bool:
         None.
     """
     try:
-        response = requests.get("{0}/api/ps".format(provider.base_url), timeout=5)
+        response = requests.get(f"{provider.base_url}/api/ps", timeout=5)
         if response.status_code != 200:
             return False
         data = response.json()
@@ -130,7 +124,7 @@ def warm_up_provider(provider: "BaseLLMProvider", verbose: bool = False) -> bool
     try:
         from standup.llm.ollama_provider import OllamaProvider
     except Exception:
-        OllamaProvider = None  # type: ignore[assignment]
+        OllamaProvider = None  # type: ignore[misc, assignment]  # noqa: N806
 
     if OllamaProvider is not None and isinstance(provider, OllamaProvider):
         return warm_up_ollama(provider, verbose=verbose)
@@ -175,13 +169,11 @@ def get_warm_up_script_content(provider_config: Dict[str, object]) -> str:
     provider_name = str(provider_config.get("name", "ollama"))
     if sys.platform == "win32":
         return (
-            "# StandupBot warm-up startup script\n"
-            "# Provider: {0}\n"
-            "standup warm-up\n"
-        ).format(provider_name)
+            f"# StandupBot warm-up startup script\n# Provider: {provider_name}\nstandup warm-up\n"
+        )
     return (
         "#!/usr/bin/env bash\n"
         "# StandupBot warm-up startup script\n"
-        "# Provider: {0}\n"
+        f"# Provider: {provider_name}\n"
         "standup warm-up\n"
-    ).format(provider_name)
+    )
