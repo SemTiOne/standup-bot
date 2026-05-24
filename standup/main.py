@@ -1,3 +1,7 @@
+"""
+main.py - CLI entry point for StandupBot.
+"""
+
 import argparse
 import subprocess
 import sys
