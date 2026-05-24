@@ -38,12 +38,10 @@ def get_provider(config: dict, override: Optional[str] = None) -> BaseLLMProvide
         return OllamaProvider(config)
     if name == "groq":
         return GroqProvider(config)
-    raise ValueError("Unknown provider: {0!r}. Valid options: {1}".format(name, _VALID_PROVIDERS))
+    raise ValueError(f"Unknown provider: {name!r}. Valid options: {_VALID_PROVIDERS}")
 
 
-def get_provider_with_fallback(
-    config: dict, override: Optional[str] = None
-) -> BaseLLMProvider:
+def get_provider_with_fallback(config: dict, override: Optional[str] = None) -> BaseLLMProvider:
     """
     Get the configured provider with automatic fallback to Groq when available.
 
@@ -60,7 +58,7 @@ def get_provider_with_fallback(
     try:
         provider = get_provider(config, override)
     except ValueError as exc:
-        console.print("[red]❌ {0}[/red]".format(sanitize_error_message(exc)))
+        console.print(f"[red]❌ {sanitize_error_message(exc)}[/red]")
         sys.exit(1)
 
     if provider.is_available():

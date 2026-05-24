@@ -229,6 +229,7 @@ def run_migrations(conn: sqlite3.Connection) -> None:
     Raises:
         None.
     """
+
     def _run_pending() -> None:
         current_version = get_current_schema_version(conn)
         for version, _, description in _MIGRATIONS:
@@ -266,9 +267,7 @@ def init_db() -> None:
     except (sqlite3.Error, OSError) as exc:
         log_event("db_error", operation="init")
         console.print(
-            "[yellow]⚠️  Could not initialize history database: {0}[/yellow]".format(
-                sanitize_error_message(exc)
-            )
+            f"[yellow]⚠️  Could not initialize history database: {sanitize_error_message(exc)}[/yellow]"
         )
 
 
@@ -334,9 +333,7 @@ def find_cached_standup_entry(
     except sqlite3.Error as exc:
         log_event("db_error", operation="find_cached")
         console.print(
-            "[yellow]⚠️  Could not read standup history: {0}[/yellow]".format(
-                sanitize_error_message(exc)
-            )
+            f"[yellow]⚠️  Could not read standup history: {sanitize_error_message(exc)}[/yellow]"
         )
         return None
 
@@ -360,8 +357,6 @@ def find_cached_standup(fingerprint: str, tone: str, provider: str) -> Optional[
     if not entry:
         return None
     return str(entry.get("standup_text", ""))
-
-
 
 
 def _enforce_max_rows(db_path: Optional[str] = None) -> Optional[int]:
@@ -396,6 +391,7 @@ def _enforce_max_rows(db_path: Optional[str] = None) -> Optional[int]:
         return excess
     except sqlite3.Error:
         return None
+
 
 def save_standup(
     fingerprint: str,
@@ -453,9 +449,7 @@ def save_standup(
     except (sqlite3.Error, OSError, TypeError, ValueError) as exc:
         log_event("db_error", operation="save")
         console.print(
-            "[yellow]⚠️  Could not save standup history: {0}[/yellow]".format(
-                sanitize_error_message(exc)
-            )
+            f"[yellow]⚠️  Could not save standup history: {sanitize_error_message(exc)}[/yellow]"
         )
 
 
@@ -488,9 +482,7 @@ def get_history(limit: int = 10) -> List[Dict[str, object]]:
     except (sqlite3.Error, TypeError, ValueError) as exc:
         log_event("db_error", operation="history")
         console.print(
-            "[yellow]⚠️  Could not fetch standup history: {0}[/yellow]".format(
-                sanitize_error_message(exc)
-            )
+            f"[yellow]⚠️  Could not fetch standup history: {sanitize_error_message(exc)}[/yellow]"
         )
         return []
 
@@ -522,9 +514,7 @@ def clear_history(older_than_days: Optional[int] = None) -> int:
     except (sqlite3.Error, TypeError, ValueError) as exc:
         log_event("db_error", operation="clear")
         console.print(
-            "[yellow]⚠️  Could not clear standup history: {0}[/yellow]".format(
-                sanitize_error_message(exc)
-            )
+            f"[yellow]⚠️  Could not clear standup history: {sanitize_error_message(exc)}[/yellow]"
         )
         return 0
 

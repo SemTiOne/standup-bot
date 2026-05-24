@@ -6,6 +6,7 @@ careful to avoid recording secrets, commit content, LLM output, template text,
 file paths, or user email addresses.
 """
 
+import contextlib
 import json
 import logging
 import os
@@ -160,10 +161,8 @@ def get_logger() -> logging.Logger:
         return _LOGGER
 
     log_path = Path(get_log_path())
-    try:
+    with contextlib.suppress(OSError):
         log_path.parent.mkdir(parents=True, exist_ok=True)
-    except OSError:
-        pass
 
     logger = logging.getLogger(_LOGGER_NAME)
     logger.setLevel(logging.INFO)

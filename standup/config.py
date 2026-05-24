@@ -72,9 +72,7 @@ def load_config() -> dict:
 
     if not config_path.exists():
         console.print(
-            "[yellow]⚠️  No config found at {0}. Using defaults. Run: standup --setup[/yellow]".format(
-                CONFIG_PATH
-            )
+            f"[yellow]⚠️  No config found at {CONFIG_PATH}. Using defaults. Run: standup --setup[/yellow]"
         )
         raw_config: Dict[str, Any] = {}
     else:
@@ -83,16 +81,12 @@ def load_config() -> dict:
             raw_config = json.loads(config_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
             console.print(
-                "[red]❌ Invalid JSON in {0}: {1}[/red]".format(
-                    CONFIG_PATH, sanitize_error_message(exc)
-                )
+                f"[red]❌ Invalid JSON in {CONFIG_PATH}: {sanitize_error_message(exc)}[/red]"
             )
             sys.exit(1)
         except OSError as exc:
             console.print(
-                "[red]❌ Could not read {0}: {1}[/red]".format(
-                    CONFIG_PATH, sanitize_error_message(exc)
-                )
+                f"[red]❌ Could not read {CONFIG_PATH}: {sanitize_error_message(exc)}[/red]"
             )
             sys.exit(1)
 
@@ -107,8 +101,8 @@ def load_config() -> dict:
         log_event("config_validation_failed", error_count=len(errors))
         console.print("[red]❌ Config validation failed:[/red]")
         for error in errors:
-            console.print("  [red]• {0}[/red]".format(error))
-        console.print("\nFix your config at: {0}".format(CONFIG_PATH))
+            console.print(f"  [red]• {error}[/red]")
+        console.print(f"\nFix your config at: {CONFIG_PATH}")
         console.print("Run [bold]standup --setup[/bold] to reconfigure.")
         sys.exit(1)
 
@@ -118,7 +112,7 @@ def load_config() -> dict:
         if repo_ok:
             valid_repos.append(repo)
         else:
-            console.print("[yellow]⚠️  Skipping invalid repo: {0}[/yellow]".format(message))
+            console.print(f"[yellow]⚠️  Skipping invalid repo: {message}[/yellow]")
     config["repos"] = valid_repos
 
     return config
@@ -131,4 +125,4 @@ def save_config(config: dict) -> None:
     config_path = Path(CONFIG_PATH)
     config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
     enforce_file_permissions(CONFIG_PATH, label="Config file")
-    console.print("[green]✅ Config saved to {0}[/green]".format(CONFIG_PATH))
+    console.print(f"[green]✅ Config saved to {CONFIG_PATH}[/green]")

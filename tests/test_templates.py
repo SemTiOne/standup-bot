@@ -5,9 +5,9 @@ from datetime import datetime
 import pytest
 
 from standup.templates import (
-    BUILTIN_TEMPLATES,
     _MAX_RENDERED_LENGTH,
     _MAX_VARIABLE_VALUE_LENGTH,
+    BUILTIN_TEMPLATES,
     build_template_variables,
     get_template,
     list_templates,
@@ -39,7 +39,9 @@ def test_get_template_unknown_raises():
 
 
 def test_parse_llm_output_handles_bold_headers():
-    parsed = parse_llm_output("**Yesterday:** shipped cache\n**Today:** write tests\n**Blockers:** none")
+    parsed = parse_llm_output(
+        "**Yesterday:** shipped cache\n**Today:** write tests\n**Blockers:** none"
+    )
     assert parsed["yesterday"] == "shipped cache"
     assert parsed["today"] == "write tests"
     assert parsed["blockers"] == "none"

@@ -1,9 +1,6 @@
 """Tests for standup/rate_limiter.py."""
 
-import json
 from datetime import datetime, timedelta
-
-import pytest
 
 from standup.rate_limiter import (
     check_cooldown,
@@ -13,7 +10,6 @@ from standup.rate_limiter import (
     record_call,
     save_usage,
 )
-
 
 # ---------------------------------------------------------------------------
 # check_cooldown
@@ -62,6 +58,7 @@ def test_cooldown_bad_timestamp():
 
 def test_daily_cap_under():
     from datetime import date
+
     today = date.today().isoformat()
     usage = {"last_call": None, "daily": {today: 3}}
     allowed, used = check_daily_cap(usage, 10)
@@ -71,6 +68,7 @@ def test_daily_cap_under():
 
 def test_daily_cap_at_limit():
     from datetime import date
+
     today = date.today().isoformat()
     usage = {"last_call": None, "daily": {today: 10}}
     allowed, used = check_daily_cap(usage, 10)
@@ -98,6 +96,7 @@ def test_record_call_sets_last_call():
 
 def test_record_call_increments_daily():
     from datetime import date
+
     today = date.today().isoformat()
     usage = {"last_call": None, "daily": {today: 2}}
     updated = record_call(usage)
@@ -108,6 +107,7 @@ def test_record_call_first_call_of_day():
     usage = {"last_call": None, "daily": {}}
     updated = record_call(usage)
     from datetime import date
+
     today = date.today().isoformat()
     assert updated["daily"][today] == 1
 
@@ -119,6 +119,7 @@ def test_record_call_first_call_of_day():
 
 def test_save_and_load_usage(tmp_path, monkeypatch):
     from datetime import date
+
     path = str(tmp_path / ".standup_usage.json")
     monkeypatch.setattr("standup.rate_limiter.USAGE_PATH", path)
 
@@ -147,6 +148,7 @@ def test_load_usage_invalid_json(tmp_path, monkeypatch):
 
 def test_save_usage_prunes_old_entries(tmp_path, monkeypatch):
     from datetime import date, timedelta
+
     path = str(tmp_path / ".standup_usage.json")
     monkeypatch.setattr("standup.rate_limiter.USAGE_PATH", path)
 
@@ -178,5 +180,5 @@ def test_get_usage_report_shows_7_days(tmp_path, monkeypatch):
     monkeypatch.setattr("standup.rate_limiter.USAGE_PATH", path)
     report = get_usage_report()
     # Should contain 7 date lines
-    lines = [l for l in report.splitlines() if "202" in l and "call" in l]
+    lines = [ln for ln in report.splitlines() if "202" in ln and "call" in ln]
     assert len(lines) == 7

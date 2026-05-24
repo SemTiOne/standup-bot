@@ -4,8 +4,8 @@ llm/groq_provider.py - Groq free cloud LLM provider.
 
 import os
 
-from standup.logger import log_event
 from standup.llm.base import BaseLLMProvider, LLMProviderError
+from standup.logger import log_event
 from standup.validator import MAX_LLM_RESPONSE_LENGTH
 
 _SYSTEM_PROMPT = (
@@ -44,9 +44,7 @@ class GroqProvider(BaseLLMProvider):
         """
         if not self.api_key:
             raise LLMProviderError(
-                "Groq API key is invalid or missing. Get a free key at: {0}".format(
-                    GROQ_SIGNUP_URL
-                )
+                f"Groq API key is invalid or missing. Get a free key at: {GROQ_SIGNUP_URL}"
             )
 
         try:
@@ -81,9 +79,7 @@ class GroqProvider(BaseLLMProvider):
             message = str(exc).lower()
             if "401" in message or "invalid api key" in message or "authentication" in message:
                 raise LLMProviderError(
-                    "Groq API key is invalid or missing. Get a free key at: {0}".format(
-                        GROQ_SIGNUP_URL
-                    )
+                    f"Groq API key is invalid or missing. Get a free key at: {GROQ_SIGNUP_URL}"
                 ) from exc
             if "429" in message or "rate limit" in message:
                 raise LLMProviderError(
@@ -128,4 +124,4 @@ class GroqProvider(BaseLLMProvider):
         Raises:
             None.
         """
-        return "Groq ({0})".format(self.model)
+        return f"Groq ({self.model})"

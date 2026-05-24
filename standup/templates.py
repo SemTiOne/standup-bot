@@ -96,7 +96,7 @@ def get_template(name: str, custom_templates: Optional[Dict[str, str]] = None) -
         return custom_templates[name]
     if name in BUILTIN_TEMPLATES:
         return BUILTIN_TEMPLATES[name]
-    raise ValueError("Unknown template: {0}".format(name))
+    raise ValueError(f"Unknown template: {name}")
 
 
 def parse_llm_output(standup_text: str) -> Dict[str, str]:
@@ -132,7 +132,9 @@ def parse_llm_output(standup_text: str) -> Dict[str, str]:
             continue
 
         if current_key:
-            separator = "\n" if result[current_key] and not result[current_key].endswith("\n") else ""
+            separator = (
+                "\n" if result[current_key] and not result[current_key].endswith("\n") else ""
+            )
             result[current_key] += separator + line
 
     for key, fallback in (("yesterday", ""), ("today", ""), ("blockers", "None")):

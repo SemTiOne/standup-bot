@@ -6,8 +6,8 @@ from typing import List
 
 import requests
 
-from standup.logger import log_event
 from standup.llm.base import BaseLLMProvider, LLMProviderError
+from standup.logger import log_event
 from standup.validator import MAX_LLM_RESPONSE_LENGTH
 
 _SYSTEM_PROMPT = (
@@ -74,7 +74,9 @@ class OllamaProvider(BaseLLMProvider):
             log_event("llm_error", error_type=type(exc).__name__, provider="ollama")
             message = str(exc).lower()
             if "connection" in message or "refused" in message or "cannot connect" in message:
-                raise LLMProviderError("Ollama is not running. Start it with: ollama serve") from exc
+                raise LLMProviderError(
+                    "Ollama is not running. Start it with: ollama serve"
+                ) from exc
             if "not found" in message or "model" in message:
                 raise LLMProviderError(
                     "Configured Ollama model is not available locally. Pull it before retrying."
@@ -95,7 +97,7 @@ class OllamaProvider(BaseLLMProvider):
             None.
         """
         try:
-            resp = requests.get("{0}/api/tags".format(self.base_url), timeout=3)
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=3)
             if resp.status_code != 200:
                 return False
             data = resp.json()
@@ -117,7 +119,7 @@ class OllamaProvider(BaseLLMProvider):
         Raises:
             None.
         """
-        return "Ollama ({0})".format(self.model)
+        return f"Ollama ({self.model})"
 
     def list_local_models(self) -> List[str]:
         """
@@ -133,7 +135,7 @@ class OllamaProvider(BaseLLMProvider):
             None.
         """
         try:
-            resp = requests.get("{0}/api/tags".format(self.base_url), timeout=5)
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=5)
             if resp.status_code != 200:
                 return []
             data = resp.json()

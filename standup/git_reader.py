@@ -63,9 +63,7 @@ def get_recent_commits(
     try:
         import git  # type: ignore[import]
     except ImportError:
-        console.print(
-            "[red]❌ GitPython is not installed. Run: pip install gitpython[/red]"
-        )
+        console.print("[red]❌ GitPython is not installed. Run: pip install gitpython[/red]")
         return []
 
     repo_name = Path(repo_path).name
@@ -74,16 +72,14 @@ def get_recent_commits(
     try:
         repo = git.Repo(repo_path)
     except git.exc.InvalidGitRepositoryError:
-        console.print("[yellow]⚠️  Not a git repository: {0}[/yellow]".format(repo_path))
+        console.print(f"[yellow]⚠️  Not a git repository: {repo_path}[/yellow]")
         return []
     except git.exc.NoSuchPathError:
-        console.print("[yellow]⚠️  Repo path not found: {0}[/yellow]".format(repo_path))
+        console.print(f"[yellow]⚠️  Repo path not found: {repo_path}[/yellow]")
         return []
     except Exception as exc:
         console.print(
-            "[yellow]⚠️  Could not open repo {0}: {1}[/yellow]".format(
-                repo_path, sanitize_error_message(exc)
-            )
+            f"[yellow]⚠️  Could not open repo {repo_path}: {sanitize_error_message(exc)}[/yellow]"
         )
         return []
 
@@ -116,7 +112,7 @@ def get_recent_commits(
                 stats = commit.stats.total
                 insertions = stats.get("insertions", 0)
                 deletions = stats.get("deletions", 0)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
             subject = commit.message.strip().splitlines()[0] if commit.message else ""
@@ -135,9 +131,7 @@ def get_recent_commits(
 
             if len(commits) >= MAX_COMMITS_PER_RUN:
                 console.print(
-                    "[yellow]⚠️  Commit count exceeded {0}; truncating to the most recent entries.[/yellow]".format(
-                        MAX_COMMITS_PER_RUN
-                    )
+                    f"[yellow]⚠️  Commit count exceeded {MAX_COMMITS_PER_RUN}; truncating to the most recent entries.[/yellow]"
                 )
                 log_event(
                     "commit_limit_truncated",
@@ -147,9 +141,7 @@ def get_recent_commits(
                 break
     except Exception as exc:
         console.print(
-            "[yellow]⚠️  Error reading commits from {0}: {1}[/yellow]".format(
-                repo_path, sanitize_error_message(exc)
-            )
+            f"[yellow]⚠️  Error reading commits from {repo_path}: {sanitize_error_message(exc)}[/yellow]"
         )
 
     return commits[:MAX_COMMITS_PER_RUN]

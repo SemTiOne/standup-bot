@@ -24,9 +24,7 @@ console = Console()
 
 _REDACTED = "[REDACTED]"
 _PATTERNS = [
-    re.compile(
-        r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key)\s*[=:]\s*\S+"
-    ),
+    re.compile(r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key)\s*[=:]\s*\S+"),
     re.compile(r"\b(?:10|172\.(?:1[6-9]|2\d|3[01])|192\.168)\.\d{1,3}\.\d{1,3}\b"),
     re.compile(r"\b\w[\w.-]+\.(?:local|internal|corp|lan)\b", re.IGNORECASE),
     re.compile(r"(?i)bearer\s+[A-Za-z0-9\-._~+/]+=*"),
@@ -166,8 +164,8 @@ def enforce_file_permissions(file_path: str, label: str = "File") -> None:
         if file_path not in _PERMISSION_WARNED_PATHS:
             _PERMISSION_WARNED_PATHS.add(file_path)
             console.print(
-                "[yellow]⚠️  Windows detected: cannot enforce file permissions on {0}. "
-                "Ensure only your user can read it.[/yellow]".format(label)
+                f"[yellow]⚠️  Windows detected: cannot enforce file permissions on {label}. "
+                "Ensure only your user can read it.[/yellow]"
             )
         return
     try:
@@ -206,15 +204,15 @@ def _permission_status(file_path: str, label: str) -> Tuple[str, str, str]:
         return label, "❌", "Could not stat file."
     if mode == 0o600:
         return label, "✅", "chmod 600 OK"
-    return label, "❌", "Mode is {0}; expected 0o600".format(oct(mode))
+    return label, "❌", f"Mode is {oct(mode)}; expected 0o600"
 
 
 def _format_size(size_bytes: int) -> str:
     if size_bytes < 1024:
-        return "{0} B".format(size_bytes)
+        return f"{size_bytes} B"
     if size_bytes < 1024 * 1024:
-        return "{0:.1f} KB".format(size_bytes / 1024.0)
-    return "{0:.2f} MB".format(size_bytes / float(1024 * 1024))
+        return f"{size_bytes / 1024.0:.1f} KB"
+    return f"{size_bytes / float(1024 * 1024):.2f} MB"
 
 
 def run_doctor() -> None:  # noqa: C901
@@ -267,7 +265,7 @@ def run_doctor() -> None:  # noqa: C901
 
     provider_name = config.get("provider", {}).get("name", "")
     if provider_name in ("ollama", "groq"):
-        _record("Provider configured", "✅", "provider.name = {0!r}".format(provider_name))
+        _record("Provider configured", "✅", f"provider.name = {provider_name!r}")
     else:
         _record("Provider configured", "❌", "provider.name is missing or invalid.")
 
@@ -295,7 +293,7 @@ def run_doctor() -> None:  # noqa: C901
 
         key = env_key or cfg_key
         if key and validate_groq_api_key(key):
-            _record("Groq key format", "✅", "Key looks valid: {0}".format(mask_api_key(key)))
+            _record("Groq key format", "✅", f"Key looks valid: {mask_api_key(key)}")
         elif key:
             _record("Groq key format", "❌", "Key format is invalid.")
         else:
@@ -311,7 +309,7 @@ def run_doctor() -> None:  # noqa: C901
 
     log_path = Path(get_log_path())
     if log_path.exists():
-        _record("Log file", "✅", "{0} ({1})".format(log_path, _format_size(get_log_size_bytes())))
+        _record("Log file", "✅", f"{log_path} ({_format_size(get_log_size_bytes())})")
     else:
         _record("Log file", "ℹ️", "No log file yet.")
 
@@ -334,7 +332,7 @@ def run_doctor() -> None:  # noqa: C901
         if repo_errors:
             _record("Repo paths valid", "❌", " | ".join(repo_errors))
         else:
-            _record("Repo paths valid", "✅", "{0} repo(s) configured and valid".format(len(repos)))
+            _record("Repo paths valid", "✅", f"{len(repos)} repo(s) configured and valid")
     else:
         _record("Repo paths valid", "⚠️", "No repos configured.")
 
@@ -343,20 +341,13 @@ def run_doctor() -> None:  # noqa: C901
         _record(
             "Python version",
             "✅",
-            "Python {0}.{1}.{2} >= 3.9".format(
-                version_info.major,
-                version_info.minor,
-                version_info.micro,
-            ),
+            f"Python {version_info.major}.{version_info.minor}.{version_info.micro} >= 3.9",
         )
     else:
         _record(
             "Python version",
             "❌",
-            "Python {0}.{1} detected; requires 3.9+".format(
-                version_info.major,
-                version_info.minor,
-            ),
+            f"Python {version_info.major}.{version_info.minor} detected; requires 3.9+",
         )
 
     missing_dependencies = []
@@ -370,9 +361,7 @@ def run_doctor() -> None:  # noqa: C901
         _record(
             "Dependencies",
             "❌",
-            "Missing: {0} - run: pip install -r requirements.txt".format(
-                ", ".join(missing_dependencies)
-            ),
+            f"Missing: {', '.join(missing_dependencies)} - run: pip install -r requirements.txt",
         )
     else:
         _record("Dependencies", "✅", "All required packages are installed.")
@@ -434,7 +423,7 @@ def run_doctor() -> None:  # noqa: C901
         _record(
             "History DB schema",
             "✅" if schema_version == latest_version else "⚠️",
-            "{0}/{1}".format(schema_version, latest_version),
+            f"{schema_version}/{latest_version}",
         )
         _record(
             "History DB WAL mode",
@@ -461,12 +450,6 @@ def run_doctor() -> None:  # noqa: C901
     score = int(100 * (passed + 0.5 * warned) / total) if total else 0
     color = "green" if score >= 80 else "yellow" if score >= 60 else "red"
     console.print(
-        "\n[bold {0}]Health Score: {1}/100[/bold {0}]  ✅ {2}  ⚠️ {3}  ❌ {4}".format(
-            color,
-            score,
-            passed,
-            warned,
-            failed,
-        )
+        f"\n[bold {color}]Health Score: {score}/100[/bold {color}]  ✅ {passed}  ⚠️ {warned}  ❌ {failed}"
     )
     log_event("doctor_run", health_score=score, passed=passed, warned=warned, failed=failed)

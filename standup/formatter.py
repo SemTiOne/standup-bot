@@ -31,7 +31,7 @@ def format_commits_for_prompt(commits: List[dict]) -> str:
         all_modules.update(commit.get("modules", []))
 
     for repo, repo_commits in by_repo.items():
-        lines.append("REPO: {0}".format(repo))
+        lines.append(f"REPO: {repo}")
         for commit in repo_commits:
             time_str = commit.get("timestamp", "")[-5:]
             message = redact_sensitive_patterns(commit.get("message", ""))
@@ -43,22 +43,17 @@ def format_commits_for_prompt(commits: List[dict]) -> str:
 
             file_str = ", ".join(files[:5])
             if len(files) > 5:
-                file_str += " (+{0} more)".format(len(files) - 5)
+                file_str += f" (+{len(files) - 5} more)"
 
-            line = "- [{0}] {1} ({2}) {3}".format(time_str, commit_emoji, commit_type, message).strip()
+            line = f"- [{time_str}] {commit_emoji} ({commit_type}) {message}".strip()
             if file_str:
-                line += " -> files: {0}".format(file_str)
-            line += " (+{0}/-{1})".format(insertions, deletions)
+                line += f" -> files: {file_str}"
+            line += f" (+{insertions}/-{deletions})"
             lines.append(line)
         lines.append("")
 
     lines.append(
-        "SUMMARY: {0} commit(s), +{1}/-{2} lines, modules: {3}".format(
-            total_commits,
-            total_insertions,
-            total_deletions,
-            ", ".join(sorted(all_modules)) or "n/a",
-        )
+        f"SUMMARY: {total_commits} commit(s), +{total_insertions}/-{total_deletions} lines, modules: {', '.join(sorted(all_modules)) or 'n/a'}"
     )
 
     return "\n".join(lines)
@@ -71,12 +66,12 @@ def build_standup_prompt(formatted_commits: str, tone: str) -> str:
     )
     return (
         "Here is my recent git activity:\n\n"
-        "{0}\n\n"
+        f"{formatted_commits}\n\n"
         "Please generate a daily standup summary from this data. "
         "Pay attention to the commit type labels so features, fixes, refactors, and supporting work are described accurately. "
-        "{1} "
+        f"{tone_instruction} "
         "Format it as:\n"
         "**Yesterday:** what I worked on\n"
         "**Today:** what I plan to do\n"
         "**Blockers:** any blockers (or 'None')\n"
-    ).format(formatted_commits, tone_instruction)
+    )

@@ -1,11 +1,9 @@
 """Tests for standup/llm/factory.py."""
 
-import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from standup.llm.base import LLMProviderError
 from standup.llm.factory import get_provider, get_provider_with_fallback
 from standup.llm.groq_provider import GroqProvider
 from standup.llm.ollama_provider import OllamaProvider
