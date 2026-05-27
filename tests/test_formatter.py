@@ -1,7 +1,5 @@
 """Tests for standup/formatter.py."""
 
-import pytest
-
 from standup.formatter import build_standup_prompt, format_commits_for_prompt
 
 _SAMPLE_COMMITS = [

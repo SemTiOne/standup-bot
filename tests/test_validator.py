@@ -285,7 +285,7 @@ def test_validate_resource_limits_rejects_too_many_repos(tmp_path):
 
 def test_validate_resource_limits_rejects_too_many_custom_templates(tmp_path):
     config = _make_valid_config(tmp_path)
-    config["custom_templates"] = {"t{0}".format(i): "Done: {yesterday}" for i in range(11)}
+    config["custom_templates"] = {f"t{i}": "Done: {yesterday}" for i in range(11)}
     ok, errors = validate_resource_limits(config)
     assert not ok
     assert errors

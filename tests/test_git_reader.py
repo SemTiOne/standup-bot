@@ -158,8 +158,8 @@ def test_get_recent_commits_caps_total_count(monkeypatch):
 
     class FakeCommit:
         def __init__(self, index):
-            self.hexsha = "abcdef{0:06d}".format(index)
-            self.message = "commit {0}".format(index)
+            self.hexsha = f"abcdef{index:06d}"
+            self.message = f"commit {index}"
             self.author = types.SimpleNamespace(email="dev@example.com")
             self.committed_datetime = now
             self.parents = []

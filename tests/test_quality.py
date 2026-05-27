@@ -1,6 +1,11 @@
 """Tests for standup/quality.py."""
 
-from standup.quality import _extract_json, format_score_badge, generate_with_quality_retry, score_standup
+from standup.quality import (
+    _extract_json,
+    format_score_badge,
+    generate_with_quality_retry,
+    score_standup,
+)
 
 
 class FakeProvider:
@@ -57,7 +62,10 @@ def test_score_standup_fallback_provider_error_returns_zero():
 
 def test_generate_with_quality_retry_returns_first_good_result(monkeypatch):
     provider = FakeProvider(["draft one"])
-    monkeypatch.setattr("standup.quality.score_standup", lambda text, provider_obj: {"score": 90, "issues": [], "strengths": ["clear"]})
+    monkeypatch.setattr(
+        "standup.quality.score_standup",
+        lambda text, provider_obj: {"score": 90, "issues": [], "strengths": ["clear"]},
+    )
     result = generate_with_quality_retry("prompt", provider, "casual", 80)
     assert result["standup_text"] == "draft one"
     assert result["retries"] == 0
@@ -78,7 +86,10 @@ def test_generate_with_quality_retry_retries_until_threshold(monkeypatch):
 
 def test_generate_with_quality_retry_stops_after_max_retries(monkeypatch):
     provider = FakeProvider(["one", "two", "three"])
-    monkeypatch.setattr("standup.quality.score_standup", lambda text, provider_obj: {"score": 10, "issues": ["bad"], "strengths": []})
+    monkeypatch.setattr(
+        "standup.quality.score_standup",
+        lambda text, provider_obj: {"score": 10, "issues": ["bad"], "strengths": []},
+    )
     result = generate_with_quality_retry("prompt", provider, "casual", 80)
     assert result["retries"] == 2
     assert result["standup_text"] == "three"

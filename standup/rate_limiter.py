@@ -170,8 +170,8 @@ def enforce_rate_limit(config: dict, force: bool = False) -> None:
         mins = seconds_remaining // 60
         secs = seconds_remaining % 60
         console.print(
-            "[yellow]⏳ Cooldown active. Please wait {0}m {1}s before running again.[/yellow]\n"
-            "[dim]Use --force to bypass.[/dim]".format(mins, secs)
+            f"[yellow]⏳ Cooldown active. Please wait {mins}m {secs}s before running again.[/yellow]\n"
+            "[dim]Use --force to bypass.[/dim]"
         )
         sys.exit(1)
 
@@ -179,10 +179,8 @@ def enforce_rate_limit(config: dict, force: bool = False) -> None:
     if not allowed:
         log_event("rate_limit_hit", limit_type="daily", seconds_remaining=0)
         console.print(
-            "[yellow]🚫 Daily cap reached ({0}/{1} calls today).[/yellow]\n"
-            "[dim]Use --force to bypass, or wait until tomorrow.[/dim]".format(
-                calls_today, max_calls
-            )
+            f"[yellow]🚫 Daily cap reached ({calls_today}/{max_calls} calls today).[/yellow]\n"
+            "[dim]Use --force to bypass, or wait until tomorrow.[/dim]"
         )
         sys.exit(1)
 
@@ -226,14 +224,14 @@ def get_usage_report() -> str:
     lines = [
         "📊 StandupBot Usage Report",
         "─" * 32,
-        "Last 7 days: [{0}]".format(spark),
+        f"Last 7 days: [{spark}]",
     ]
     for index, day in enumerate(sparkline_days):
-        lines.append("  {0}: {1} call(s)".format(day, counts[index]))
+        lines.append(f"  {day}: {counts[index]} call(s)")
     lines += [
         "─" * 32,
-        "Total (7d): {0} calls".format(total_7),
-        "Total (all): {0} calls".format(total_all),
-        "Last call:   {0}".format(last_call),
+        f"Total (7d): {total_7} calls",
+        f"Total (all): {total_all} calls",
+        f"Last call:   {last_call}",
     ]
     return "\n".join(lines)

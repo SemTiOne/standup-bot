@@ -1,12 +1,10 @@
 """Tests for standup/config.py."""
 
 import json
-from pathlib import Path
 
 import pytest
 
 from standup.config import _deep_merge, save_config
-
 
 # ---------------------------------------------------------------------------
 # _deep_merge
@@ -74,12 +72,21 @@ def test_save_config_writes_json(tmp_path, monkeypatch):
 def test_save_config_valid_json(tmp_path, monkeypatch):
     cfg_path = tmp_path / ".standup.json"
     monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
-    save_config({"tone": "formal", "repos": [], "author_email": "",
-                 "hours_lookback": 24, "slack_webhook_url": "",
-                 "provider": {"name": "ollama",
-                              "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-                              "groq": {"api_key": "", "model": "llama3-8b-8192"}},
-                 "rate_limit": {"cooldown_minutes": 30, "max_calls_per_day": 10, "enabled": True}})
+    save_config(
+        {
+            "tone": "formal",
+            "repos": [],
+            "author_email": "",
+            "hours_lookback": 24,
+            "slack_webhook_url": "",
+            "provider": {
+                "name": "ollama",
+                "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
+                "groq": {"api_key": "", "model": "llama3-8b-8192"},
+            },
+            "rate_limit": {"cooldown_minutes": 30, "max_calls_per_day": 10, "enabled": True},
+        }
+    )
     # Should parse without error
     data = json.loads(cfg_path.read_text())
     assert isinstance(data, dict)

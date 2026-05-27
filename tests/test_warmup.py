@@ -1,7 +1,12 @@
 """Tests for standup/warmup.py."""
 
 from standup.llm.groq_provider import GroqProvider
-from standup.warmup import get_warm_up_script_content, is_model_warm, warm_up_ollama, warm_up_provider
+from standup.warmup import (
+    get_warm_up_script_content,
+    is_model_warm,
+    warm_up_ollama,
+    warm_up_provider,
+)
 
 
 class DummyResponse:
@@ -61,7 +66,9 @@ def test_is_model_warm_true_with_latest_suffix(monkeypatch):
 
 
 def test_is_model_warm_false_on_missing_endpoint(monkeypatch):
-    monkeypatch.setattr("standup.warmup.requests.get", lambda *args, **kwargs: DummyResponse(404, {}))
+    monkeypatch.setattr(
+        "standup.warmup.requests.get", lambda *args, **kwargs: DummyResponse(404, {})
+    )
     assert is_model_warm(DummyOllamaProvider()) is False
 
 
@@ -87,7 +94,9 @@ def test_get_warm_up_script_content_posix(monkeypatch):
 
 
 def test_warm_up_provider_groq_path(monkeypatch):
-    provider = GroqProvider({"provider": {"groq": {"api_key": "gsk_" + ("a" * 40), "model": "llama-3.1-8b-instant"}}})
+    provider = GroqProvider(
+        {"provider": {"groq": {"api_key": "gsk_" + ("a" * 40), "model": "llama-3.1-8b-instant"}}}
+    )
     monkeypatch.setattr(provider, "is_available", lambda: True)
     assert warm_up_provider(provider, verbose=True) is True
 
