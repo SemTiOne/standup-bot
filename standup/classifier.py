@@ -52,8 +52,19 @@ _HEURISTICS = (
     ("perf", re.compile(r"\b(perf|performance|optimi[sz]e|faster)\b", re.IGNORECASE)),
     ("style", re.compile(r"\b(style|format|lint|prettier|black|whitespace)\b", re.IGNORECASE)),
     ("fix", re.compile(r"\b(fix|bug|hotfix|patch|resolve)\b", re.IGNORECASE)),
-    ("feat", re.compile(r"\b(add|adds|added|implement|implements|implemented|create|introduce|feature)\b", re.IGNORECASE)),
-    ("chore", re.compile(r"\b(chore|deps|dependency|dependencies|bump|release|maintenance)\b", re.IGNORECASE)),
+    (
+        "feat",
+        re.compile(
+            r"\b(add|adds|added|implement|implements|implemented|create|introduce|feature)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "chore",
+        re.compile(
+            r"\b(chore|deps|dependency|dependencies|bump|release|maintenance)\b", re.IGNORECASE
+        ),
+    ),
 )
 
 

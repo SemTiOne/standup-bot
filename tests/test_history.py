@@ -32,12 +32,16 @@ def test_compute_commit_fingerprint_is_order_independent():
 
 
 def test_compute_commit_fingerprint_empty_list_is_stable():
-    assert history_module.compute_commit_fingerprint([]) == history_module.compute_commit_fingerprint([])
+    assert history_module.compute_commit_fingerprint(
+        []
+    ) == history_module.compute_commit_fingerprint([])
 
 
 def test_save_and_get_history_round_trip(tmp_path, monkeypatch):
     _patch_db(monkeypatch, tmp_path)
-    history_module.save_standup("abc", "ollama", "llama3", "casual", "text", ["app"], 24, quality_score=88)
+    history_module.save_standup(
+        "abc", "ollama", "llama3", "casual", "text", ["app"], 24, quality_score=88
+    )
     history = history_module.get_history()
     assert len(history) == 1
     assert history[0]["provider"] == "ollama"
