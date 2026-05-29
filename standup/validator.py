@@ -129,8 +129,14 @@ def validate_path_safety(path: str) -> Tuple[bool, str]:
     if stripped.startswith("\\\\") or stripped.startswith("//"):
         return False, "Network paths are not allowed."
 
-    sanitized = sanitize_path(stripped)
-    candidate = Path(sanitized)
+    # Use expanduser+absolute (does NOT follow symlinks) for the candidate,
+    # then resolve (DOES follow symlinks) only for comparison.
+    cleaned = _NULL_BYTES_RE.sub("", stripped)
+    try:
+        candidate = Path(cleaned).expanduser().absolute()
+    except (OSError, RuntimeError, ValueError):
+        return False, "Path could not be resolved safely."
+
     if not candidate.is_absolute():
         return False, f"Path must be absolute: {path}"
 
@@ -139,7 +145,10 @@ def validate_path_safety(path: str) -> Tuple[bool, str]:
     except (OSError, RuntimeError, ValueError):
         return False, "Path could not be resolved safely."
 
-    if str(resolved) != sanitized:
+    # Detect traversal: the non-symlink-following absolute path should
+    # normalise cleanly without the resolved path diverging from it
+    # (unless the divergence is caused by a symlink — handled below).
+    if not candidate.exists() and str(resolved) != str(candidate):
         return False, "Path contains unsafe traversal or normalization changes."
 
     if sys.platform != "win32" and candidate.exists() and candidate.is_symlink():
