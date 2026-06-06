@@ -6,14 +6,6 @@ Generate standup updates from recent git activity with a local Ollama model or G
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-## What is new in 0.2.1
-
-- Structured JSON-line logging in `~/.standup.log` with rotation and `standup logs`
-- Hardened SQLite history with schema migrations, WAL mode, and automatic cleanup
-- Safer template rendering with strict placeholder allowlisting and output bounds
-- Path traversal defenses, resource limits, and safer error message sanitization
-- `standup --maintenance` for DB cleanup, usage pruning, and early log rotation
-
 ## Quick Start
 
 ```bash
