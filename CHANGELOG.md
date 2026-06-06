@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-06-06
+
+### Fixed
+- `llm/ollama_provider.py`: `options={"timeout": 60}` was passed as a model parameter
+  (e.g. temperature, top_p) instead of as an HTTP connection timeout — Ollama silently
+  ignored it. Fixed by moving timeout to `ollama.Client(host=..., timeout=60.0)`, which
+  propagates correctly to the underlying `httpx.Client` via `**kwargs`.
+
+### Changed
+- `llm/base.py`: Extracted `DEFAULT_SYSTEM_PROMPT` as a single shared constant.
+  Both `GroqProvider` and `OllamaProvider` previously defined the identical 7-line
+  prompt string independently — a maintenance hazard if the prompt ever needs updating.
+- `requirements.txt` / `setup.py`: Widened upper version bounds on `groq` (`<1.0.0` →
+  `<2.0.0`) and `rich` (`<14.0.0` → `<16.0.0`). The previous caps blocked users who had
+  groq 1.x or rich 14–15.x installed, causing pip dependency conflicts.
+- `setup.py`: Dropped Python 3.9 from `python_requires` (now `>=3.10`) and from the
+  PyPI classifiers. Python 3.9 reached end-of-life in October 2025 and was already absent
+  from the CI test matrix.
+
+### Infrastructure
+- `.gitattributes`: Added to enforce LF line endings across all text files. Without this,
+  `core.autocrlf=true` on Windows fights with ruff's `line-ending = "lf"` setting,
+  causing files edited by ruff to appear perpetually modified in `git status`.
+
 ## [0.2.2] - 2026-06-05
 
 ### Fixed

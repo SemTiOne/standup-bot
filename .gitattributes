@@ -1,0 +1,23 @@
+# Normalize all text files to LF on commit, LF on checkout.
+# This overrides core.autocrlf and eliminates phantom "modified" diffs
+# caused by ruff enforcing LF while Windows git enforces CRLF.
+* text=auto eol=lf
+
+# Explicitly mark all source types
+*.py    text eol=lf
+*.md    text eol=lf
+*.toml  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.txt   text eol=lf
+*.ini   text eol=lf
+*.cfg   text eol=lf
+*.json  text eol=lf
+
+# Binary files — never touch line endings
+*.db    binary
+*.db-wal binary
+*.db-shm binary
+*.png   binary
+*.jpg   binary
+*.ico   binary
