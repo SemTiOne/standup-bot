@@ -188,7 +188,7 @@ StandupBot treats config, git metadata, templates, provider responses, and local
 ## Development
 
 ```bash
-py -3 -B -m pytest tests -q
+python -m pytest tests/ -q
 ```
 
 If your environment restricts Python temp directories or `__pycache__` writes, set a writable `--basetemp` or `PYTHONDONTWRITEBYTECODE=1` while testing.

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-05
+
+### Fixed
+- `validator.py`: `validate_full_config()` no longer validates repo filesystem state
+  (existence, `.git` presence). It now only checks structural integrity (non-empty string)
+  and path safety (traversal, symlinks). The graceful "Skipping invalid repo" filter in
+  `load_config()` was previously unreachable because `validate_full_config()` would call
+  `sys.exit(1)` first — now both mechanisms work as intended.
+- `history.py`: `auto_cleanup_if_needed()` was emitting `log_event("db_error", ...)` on
+  a **successful** row deletion. Fixed to emit `log_event("db_maintenance", ...)` for the
+  success path; the `db_error` event is preserved only for actual `sqlite3.Error` failures.
+- `quality.py`: `completion.choices[0].message.content` can be `None` on empty or
+  malformed API responses. Added an `or ""` fallback to prevent a `TypeError` crash inside
+  `_extract_json()` at runtime.
+- `logger.py`: Replaced `__import__("datetime")` inline expression inside `log_event()`
+  with a proper module-level `import datetime as _dt`. The inline pattern bypasses standard
+  import conventions and is harder to audit.
+- `main.py`: Removed dead code — `if used_cache: return` at the very end of `main()` was
+  the last statement in the function and therefore never skipped anything.
+
+### Changed
+- `README.md`: Development section now uses `python -m pytest tests/ -q` instead of the
+  Windows-specific `py -3 -B -m pytest tests -q`, which fails on Linux and macOS.
+- `pytest.ini`: Added to the project root to suppress `DeprecationWarning` noise emitted
+  by globally-installed `pytest_asyncio` on Python 3.14+ (unrelated to this project's
+  test suite, which contains no async tests).
+
 ## [0.2.1] - 2026-04-27
 
 ### Added

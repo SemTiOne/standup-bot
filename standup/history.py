@@ -598,7 +598,7 @@ def auto_cleanup_if_needed(db_path: Optional[str] = None) -> Optional[int]:
             )
         deleted = int(cursor.rowcount or 0)
         if deleted > 0:
-            log_event("db_error", operation="auto_cleanup", rows_deleted=deleted)
+            log_event("db_maintenance", operation="auto_cleanup", rows_deleted=deleted)
         return deleted
     except sqlite3.Error:
         log_event("db_error", operation="auto_cleanup")

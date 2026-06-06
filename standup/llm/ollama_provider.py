@@ -6,18 +6,11 @@ from typing import List
 
 import requests
 
-from standup.llm.base import BaseLLMProvider, LLMProviderError
+from standup.llm.base import DEFAULT_SYSTEM_PROMPT, BaseLLMProvider, LLMProviderError
 from standup.logger import log_event
 from standup.validator import MAX_LLM_RESPONSE_LENGTH
 
-_SYSTEM_PROMPT = (
-    "You are a helpful assistant that generates concise daily standup summaries "
-    "for software engineers. Always respond in exactly this format:\n\n"
-    "**Yesterday:** <what was done>\n"
-    "**Today:** <what is planned>\n"
-    "**Blockers:** <any blockers, or 'None'>\n\n"
-    "Keep responses focused and professional."
-)
+_OLLAMA_REQUEST_TIMEOUT = 60.0
 
 
 class OllamaProvider(BaseLLMProvider):
@@ -49,21 +42,20 @@ class OllamaProvider(BaseLLMProvider):
                 "The 'ollama' Python package is not installed. Run: pip install ollama"
             ) from exc
 
-        system = _SYSTEM_PROMPT
+        system = DEFAULT_SYSTEM_PROMPT
         if tone == "formal":
             system += "\nUse a formal, professional tone."
         else:
             system += "\nUse a casual, friendly tone."
 
         try:
-            client = ollama.Client(host=self.base_url)
+            client = ollama.Client(host=self.base_url, timeout=_OLLAMA_REQUEST_TIMEOUT)
             response = client.chat(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": prompt},
                 ],
-                options={"timeout": 60},
             )
             content = response["message"]["content"]
             if len(content) > MAX_LLM_RESPONSE_LENGTH:

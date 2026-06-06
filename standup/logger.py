@@ -7,6 +7,7 @@ file paths, or user email addresses.
 """
 
 import contextlib
+import datetime as _dt
 import json
 import logging
 import os
@@ -203,7 +204,7 @@ def log_event(event: str, **kwargs: Any) -> None:
     """
     try:
         payload: Dict[str, Any] = {
-            "ts": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
+            "ts": _dt.datetime.now().isoformat(timespec="seconds"),
             "level": "INFO",
             "event": str(event or "unknown"),
         }

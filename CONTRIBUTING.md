@@ -5,8 +5,8 @@ Thank you for your interest in contributing! Here's how to get started.
 ## Development Setup
 
 ```bash
-git clone https://github.com/SemTiOne/standupbot.git
-cd standupbot
+git clone https://github.com/SemTiOne/standup-bot.git
+cd standup-bot
 pip install -e ".[dev]"
 ```
 

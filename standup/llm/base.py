@@ -4,6 +4,17 @@ llm/base.py — Abstract base class for all LLM providers.
 
 from abc import ABC, abstractmethod
 
+# Shared system prompt used by every provider.
+# Defined once here so updating it propagates everywhere automatically.
+DEFAULT_SYSTEM_PROMPT = (
+    "You are a helpful assistant that generates concise daily standup summaries "
+    "for software engineers. Always respond in exactly this format:\n\n"
+    "**Yesterday:** <what was done>\n"
+    "**Today:** <what is planned>\n"
+    "**Blockers:** <any blockers, or 'None'>\n\n"
+    "Keep responses focused and professional."
+)
+
 
 class LLMProviderError(Exception):
     """Raised when an LLM provider fails to generate a response."""

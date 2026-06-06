@@ -944,9 +944,6 @@ def main() -> None:  # noqa: C901
         duration_ms=duration_ms,
     )
 
-    if used_cache:
-        return
-
 
 if __name__ == "__main__":
     main()

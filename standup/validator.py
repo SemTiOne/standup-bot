@@ -708,9 +708,12 @@ def validate_full_config(config: dict) -> Tuple[bool, List[str]]:
         errors.append("repos must be a JSON array.")
     else:
         for repo in repos:
-            ok, msg = validate_repo_path(repo)
-            if not ok:
-                errors.append(f"repos: {msg}")
+            if not isinstance(repo, str) or not str(repo).strip():
+                errors.append("repos: each entry must be a non-empty string.")
+            else:
+                safe_ok, safe_msg = validate_path_safety(str(repo))
+                if not safe_ok:
+                    errors.append(f"repos: {safe_msg}")
 
     ok, msg = validate_author_email(config.get("author_email", ""))
     if not ok:

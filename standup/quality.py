@@ -147,7 +147,7 @@ def _score_with_groq(standup_text: str, provider: GroqProvider) -> Dict[str, obj
             temperature=0,
             response_format={"type": "json_object"},
         )
-        return _extract_json(completion.choices[0].message.content)
+        return _extract_json(completion.choices[0].message.content or "")
     except Exception:
         return _fallback_score()
 

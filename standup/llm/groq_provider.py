@@ -4,18 +4,9 @@ llm/groq_provider.py - Groq free cloud LLM provider.
 
 import os
 
-from standup.llm.base import BaseLLMProvider, LLMProviderError
+from standup.llm.base import DEFAULT_SYSTEM_PROMPT, BaseLLMProvider, LLMProviderError
 from standup.logger import log_event
 from standup.validator import MAX_LLM_RESPONSE_LENGTH
-
-_SYSTEM_PROMPT = (
-    "You are a helpful assistant that generates concise daily standup summaries "
-    "for software engineers. Always respond in exactly this format:\n\n"
-    "**Yesterday:** <what was done>\n"
-    "**Today:** <what is planned>\n"
-    "**Blockers:** <any blockers, or 'None'>\n\n"
-    "Keep responses focused and professional."
-)
 
 GROQ_SIGNUP_URL = "https://console.groq.com"
 
@@ -54,7 +45,7 @@ class GroqProvider(BaseLLMProvider):
                 "The 'groq' Python package is not installed. Run: pip install groq"
             ) from exc
 
-        system = _SYSTEM_PROMPT
+        system = DEFAULT_SYSTEM_PROMPT
         if tone == "formal":
             system += "\nUse a formal, professional tone."
         else:

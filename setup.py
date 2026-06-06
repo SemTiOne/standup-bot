@@ -5,21 +5,21 @@ with open("README.md", encoding="utf-8") as file_handle:
 
 setup(
     name="standupbot",
-    version="0.2.1",
+    version="0.2.2",
     description="Generate daily standup summaries from your git history using local or free cloud LLMs.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="SemTiOne",
     license="MIT",
-    python_requires=">=3.9",
+    python_requires=">=3.10",
     packages=find_packages(exclude=["tests*"]),
     package_data={"standup": ["py.typed"]},
     install_requires=[
         "ollama>=0.1.7,<1.0.0",
-        "groq>=0.4.0,<1.0.0",
+        "groq>=0.4.0,<2.0.0",
         "gitpython>=3.1.40,<4.0.0",
         "pyperclip>=1.8.2,<2.0.0",
-        "rich>=13.0.0,<14.0.0",
+        "rich>=13.0.0,<16.0.0",
         "requests>=2.31.0,<3.0.0",
     ],
     extras_require={
@@ -40,7 +40,6 @@ setup(
     },
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
