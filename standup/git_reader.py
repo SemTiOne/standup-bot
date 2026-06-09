@@ -7,7 +7,6 @@ defensive caps to untrusted git metadata.
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List
 
 from rich.console import Console
 
@@ -18,9 +17,16 @@ from standup.validator import MAX_COMMIT_MESSAGE_LENGTH, MAX_COMMITS_PER_RUN
 console = Console()
 
 
-def _infer_modules(files: List[str]) -> List[str]:
+def _infer_modules(files: list[str]) -> list[str]:
     """
     Infer top-level module names from a list of file paths.
+
+    For paths with three or more components (``src/auth/login.py``) the second
+    component is returned — the immediate sub-package rather than the generic
+    top-level directory.  For two-component paths (``tests/test_auth.py``) the
+    first component is returned so the result is a directory name rather than
+    a bare filename.  Single-component paths (root-level files) return the
+    filename itself.
 
     Args:
         files: Changed file paths from a commit.
@@ -34,8 +40,10 @@ def _infer_modules(files: List[str]) -> List[str]:
     modules = set()
     for file_path in files:
         parts = Path(file_path).parts
-        if len(parts) >= 2:
+        if len(parts) >= 3:
             modules.add(parts[1])
+        elif len(parts) == 2:
+            modules.add(parts[0])
         elif len(parts) == 1:
             modules.add(parts[0])
     return sorted(modules)
@@ -45,7 +53,7 @@ def get_recent_commits(
     repo_path: str,
     hours: int,
     author_email: str,
-) -> List[dict]:
+) -> list[dict]:
     """
     Return commit dicts from the given repo within the last ``hours``.
 
@@ -83,7 +91,7 @@ def get_recent_commits(
         )
         return []
 
-    commits: List[dict] = []
+    commits: list[dict] = []
 
     try:
         for commit in repo.iter_commits():
@@ -94,7 +102,7 @@ def get_recent_commits(
             if author_email and commit.author.email != author_email:
                 continue
 
-            files_changed: List[str] = []
+            files_changed: list[str] = []
             insertions = 0
             deletions = 0
 

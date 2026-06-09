@@ -8,7 +8,6 @@ import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List
 
 from rich.console import Console
 from rich.panel import Panel
@@ -63,12 +62,14 @@ def _post_to_slack(webhook_url: str, text: str) -> None:
 
 def _get_provider_slug(provider: object) -> str:
     """Return the storage-friendly provider slug for a provider instance."""
-    class_name = provider.__class__.__name__.lower()
-    if "ollama" in class_name:
+    from standup.llm.groq_provider import GroqProvider
+    from standup.llm.ollama_provider import OllamaProvider
+
+    if isinstance(provider, OllamaProvider):
         return "ollama"
-    if "groq" in class_name:
+    if isinstance(provider, GroqProvider):
         return "groq"
-    return class_name or "unknown"
+    return provider.__class__.__name__.lower() or "unknown"
 
 
 def _get_provider_model(provider: object) -> str:
@@ -76,7 +77,7 @@ def _get_provider_model(provider: object) -> str:
     return str(getattr(provider, "model", "unknown"))
 
 
-def _get_repo_names(commits: List[dict]) -> List[str]:
+def _get_repo_names(commits: list[dict]) -> list[str]:
     """Return unique repo names from a commit list."""
     return sorted({str(commit.get("repo", "")) for commit in commits if commit.get("repo")})
 
@@ -85,7 +86,7 @@ def _render_final_output(
     raw_standup_text: str,
     template_name: str,
     config: dict,
-    commits: List[dict],
+    commits: list[dict],
     provider_slug: str,
 ) -> str:
     """Render the final standup output using the selected template."""
@@ -103,7 +104,7 @@ def _render_final_output(
     return render_template(template_text, variables)  # type: ignore[arg-type]
 
 
-def _show_quality_breakdown(quality: Dict[str, object]) -> None:
+def _show_quality_breakdown(quality: dict[str, object]) -> None:
     """Print quality strengths and issues when available."""
     issues = quality.get("issues", [])
     strengths = quality.get("strengths", [])
@@ -150,7 +151,7 @@ def _should_auto_warm_up(provider: object, config: dict) -> bool:
     return True
 
 
-def _startup_paths() -> Dict[str, Path]:
+def _startup_paths() -> dict[str, Path]:
     """Return platform-specific startup artifact paths."""
     if sys.platform == "win32":
         base_dir = Path.home() / "AppData" / "Roaming" / "StandupBot"
@@ -170,7 +171,7 @@ def _startup_paths() -> Dict[str, Path]:
     }
 
 
-def _startup_definition_content(paths: Dict[str, Path], script_content: str) -> Dict[str, str]:
+def _startup_definition_content(paths: dict[str, Path], script_content: str) -> dict[str, str]:
     """Build platform-specific startup artifact content."""
     if sys.platform == "win32":
         script_path = str(paths["script"])
@@ -403,7 +404,7 @@ def run_setup_wizard() -> None:
     if choice == "2":
         config["provider"]["name"] = "groq"
         console.print("\n[bold cyan]Get your free API key at:[/bold cyan] https://console.groq.com")
-        console.print("\n[bold]Available Groq models:[/bold]")
+        console.print("\n[bold]Suggested Groq models:[/bold]")
         for index, model_name in enumerate(KNOWN_GROQ_MODELS[:3], 1):
             console.print(f"  {index}. {model_name}")
         while True:
@@ -852,7 +853,7 @@ def main() -> None:  # noqa: C901
     )
 
     raw_standup_text = ""
-    quality = {"score": 0, "issues": [], "strengths": []}
+    quality: dict[str, object] = {"score": 0, "issues": [], "strengths": []}
     used_cache = False
 
     if cached_entry:

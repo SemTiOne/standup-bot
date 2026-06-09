@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-06-09
+
+### Fixed
+- `quality.py`: `_score_with_ollama` had the same timeout bug fixed in v0.2.3 for
+  `ollama_provider.py` but never applied here. `timeout` was passed inside the
+  `options` dict (a model parameter — silently ignored by Ollama) and the `Client`
+  was created without any timeout, meaning quality scoring could hang indefinitely.
+  Fixed by adding `_OLLAMA_SCORING_TIMEOUT = 30.0` and passing it to
+  `ollama.Client(host=..., timeout=_OLLAMA_SCORING_TIMEOUT)`. The spurious
+  `"timeout"` key removed from `options`. An `or ""` guard was also added on
+  `response["message"]["content"]` for consistency with `groq_provider.py`.
+- `ollama_provider.py`: Added `or ""` guard on `response["message"]["content"]`
+  in `generate_standup`. A null content field (possible on aborted generation)
+  previously caused a `TypeError` in `len(content)` that was swallowed by the
+  broad `except` and surfaced as a misleading generic error message.
+- `history.py`: `auto_cleanup_if_needed` was unreachable in normal usage because
+  `_AUTO_CLEANUP_THRESHOLD = 400` exceeded the hard ceiling enforced by
+  `_enforce_max_rows` (`_MAX_HISTORY_ROWS = 365`). Removed the dead threshold
+  constant and collapsed `auto_cleanup_if_needed` to delegate directly to
+  `_enforce_max_rows`, eliminating the duplicate deletion logic.
+- `git_reader.py`: `_infer_modules` used `parts[1]` (second path component) for
+  any path with two or more components. Two-component paths like
+  `tests/test_auth.py` incorrectly returned the filename (`test_auth.py`) instead
+  of the parent directory (`tests`). Fixed with a three-way branch: `parts[1]`
+  for three-or-more-component paths, `parts[0]` for two-component paths, and
+  `parts[0]` for single-component (root) files.
+
+### Changed
+- `validator.py`: Groq model validation changed from a hard allowlist to a
+  non-empty-string check. `KNOWN_GROQ_MODELS` is now documented as a suggestion
+  list for the setup wizard only; users are no longer blocked from using models
+  added after this list was last updated. Removed deprecated `llama3-8b-8192`
+  from the list.
+- `main.py`: `_get_provider_slug` replaced fragile class-name string matching
+  (`"ollama" in class_name`) with explicit `isinstance` checks against
+  `OllamaProvider` and `GroqProvider`. Avoids silent misidentification if a
+  provider class is renamed or a third provider added.
+- `main.py`, `quality.py`, `validator.py`, `git_reader.py`, `ollama_provider.py`:
+  Modernized type annotations throughout — `List[X]` → `list[X]`, `Dict[K, V]` →
+  `dict[K, V]`, `Optional[X]` → `X | None`, `Tuple[X, Y]` → `tuple[X, Y]`.
+  Removed all `from typing import Dict, List, Optional, Tuple` imports; only
+  `Any` remains where needed.
+- `ruff.toml`: Updated `target-version` from `"py39"` to `"py310"` and removed
+  suppression of `UP006`, `UP007`, `UP035` (pyupgrade rules for legacy typing
+  syntax). These were kept for Python 3.9 compatibility which was dropped in
+  v0.2.3.
+- `setup.py`: Removed BOM marker; no functional change.
+- `README.md`: Fixed Python version badge (`3.9+` → `3.10+`), removed UTF-8 BOM,
+  updated "What is new" section to reflect v0.2.4 changes.
+- `CONTRIBUTING.md`: Updated Python version requirement (`3.9+` → `3.10+`),
+  updated typing guidance to use modern syntax (`X | None`, built-in generics),
+  updated `Tuple[bool, str]` → `tuple[bool, str]` in the validator function
+  standard.
+
+### Tests
+- `test_history.py`: Rewrote `test_auto_cleanup_if_needed_deletes_rows_over_threshold`
+  which previously passed trivially — it inserted rows via `save_standup` (which
+  calls `_enforce_max_rows` on every insert), so the ceiling was never exceeded and
+  `auto_cleanup_if_needed` never ran. New tests use a `_insert_rows_directly` helper
+  that writes to SQLite directly, bypassing `save_standup`. Added dedicated
+  `_enforce_max_rows` tests and four `auto_cleanup_if_needed` tests covering: no-op
+  within ceiling, trim above ceiling, log event emission, and exact-ceiling no-op.
+- `test_git_reader.py`: Added three tests covering the fixed `_infer_modules` logic:
+  two-component path returns directory, two-component `src/` path, and mixed-depth
+  commit with all three path lengths in one call.
+- `test_validator.py`: Replaced `test_provider_config_groq_unknown_model` (expected
+  rejection of `"gpt-4"` — correct under the old allowlist, wrong now) with
+  `test_provider_config_groq_accepts_unlisted_model` and
+  `test_provider_config_groq_rejects_empty_model`. Added
+  `test_setup_input_groq_model_unlisted_accepted` and
+  `test_setup_input_groq_model_empty_rejected` to pin the new contract.
+
 ## [0.2.3] - 2026-06-06
 
 ### Fixed

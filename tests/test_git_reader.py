@@ -10,6 +10,10 @@ from standup.git_reader import _infer_modules, get_recent_commits
 from standup.validator import MAX_COMMIT_MESSAGE_LENGTH, MAX_COMMITS_PER_RUN
 
 
+# ---------------------------------------------------------------------------
+# _infer_modules
+# ---------------------------------------------------------------------------
+
 def test_infer_modules_nested():
     files = ["src/auth/login.py", "src/models/user.py", "tests/unit/test_auth.py"]
     modules = _infer_modules(files)
@@ -33,6 +37,36 @@ def test_infer_modules_deduplicates():
 def test_infer_modules_empty():
     assert _infer_modules([]) == []
 
+
+def test_infer_modules_two_component_returns_directory_not_filename():
+    """tests/test_auth.py should yield 'tests', not 'test_auth.py'."""
+    modules = _infer_modules(["tests/test_auth.py"])
+    assert modules == ["tests"]
+    assert "test_auth.py" not in modules
+
+
+def test_infer_modules_two_component_src():
+    """src/app.py should yield 'src', not 'app.py'."""
+    modules = _infer_modules(["src/app.py"])
+    assert modules == ["src"]
+
+
+def test_infer_modules_mixed_depths():
+    """Two- and three-component paths in the same commit are handled correctly."""
+    files = [
+        "README.md",            # 1-level  → README.md
+        "src/app.py",           # 2-level  → src
+        "src/auth/login.py",    # 3-level  → auth
+    ]
+    modules = _infer_modules(files)
+    assert "README.md" in modules
+    assert "src" in modules
+    assert "auth" in modules
+
+
+# ---------------------------------------------------------------------------
+# get_recent_commits (integration — requires git)
+# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def git_repo(tmp_path):

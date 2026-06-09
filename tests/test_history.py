@@ -15,6 +15,21 @@ def _patch_db(monkeypatch, tmp_path):
     return db_path
 
 
+def _insert_rows_directly(db_path, count: int) -> None:
+    """Bypass save_standup (and _enforce_max_rows) to set up over-ceiling state."""
+    with history_module._get_connection(str(db_path)) as conn:
+        for i in range(count):
+            # Use ascending timestamps so the oldest-first DELETE is deterministic.
+            ts = f"2026-01-01T00:{i // 60:02d}:{i % 60:02d}"
+            conn.execute(
+                "INSERT INTO standups "
+                "(created_at, commit_hash, provider, model, tone, "
+                " standup_text, repos, hours_lookback, quality_score) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (ts, str(i), "ollama", "llama3", "casual", "text", "[]", 24, 0),
+            )
+
+
 def test_get_db_path_default_name():
     assert history_module.get_db_path().endswith(".standup_history.db")
 
@@ -167,17 +182,102 @@ def test_get_row_count_returns_zero_for_empty_db(tmp_path, monkeypatch):
     assert history_module.get_row_count(str(db_path)) == 0
 
 
-def test_auto_cleanup_if_needed_returns_none_under_threshold(tmp_path, monkeypatch):
-    _patch_db(monkeypatch, tmp_path)
-    history_module.save_standup("one", "ollama", "llama3", "casual", "text", ["app"], 24)
-    assert history_module.auto_cleanup_if_needed() is None
+# ---------------------------------------------------------------------------
+# _enforce_max_rows
+# ---------------------------------------------------------------------------
 
 
-def test_auto_cleanup_if_needed_deletes_rows_over_threshold(tmp_path, monkeypatch):
-    _patch_db(monkeypatch, tmp_path)
-    for index in range(history_module._AUTO_CLEANUP_THRESHOLD + 5):
-        history_module.save_standup(str(index), "ollama", "llama3", "casual", "text", ["app"], 24)
-    assert history_module.get_row_count() <= history_module._MAX_HISTORY_ROWS
+def test_enforce_max_rows_returns_none_when_under_ceiling(tmp_path, monkeypatch):
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+    _insert_rows_directly(db_path, 10)
+    assert history_module._enforce_max_rows(str(db_path)) is None
+    assert history_module.get_row_count(str(db_path)) == 10
+
+
+def test_enforce_max_rows_trims_to_ceiling(tmp_path, monkeypatch):
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+    excess = 5
+    total = history_module._MAX_HISTORY_ROWS + excess
+    _insert_rows_directly(db_path, total)
+    deleted = history_module._enforce_max_rows(str(db_path))
+    assert deleted == excess
+    assert history_module.get_row_count(str(db_path)) == history_module._MAX_HISTORY_ROWS
+
+
+def test_enforce_max_rows_deletes_oldest_rows(tmp_path, monkeypatch):
+    """The oldest rows (by created_at ASC) should be removed first."""
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+    total = history_module._MAX_HISTORY_ROWS + 3
+    _insert_rows_directly(db_path, total)
+    # The helper inserts ascending timestamps; row 0 is oldest.
+    # After trimming, commit_hash "0", "1", "2" should be gone.
+    history_module._enforce_max_rows(str(db_path))
+    with history_module._get_connection(str(db_path)) as conn:
+        hashes = {
+            row[0]
+            for row in conn.execute("SELECT commit_hash FROM standups").fetchall()
+        }
+    assert "0" not in hashes
+    assert "1" not in hashes
+    assert "2" not in hashes
+
+
+# ---------------------------------------------------------------------------
+# auto_cleanup_if_needed
+# ---------------------------------------------------------------------------
+
+
+def test_auto_cleanup_returns_none_when_within_ceiling(tmp_path, monkeypatch):
+    """With a small DB, auto_cleanup_if_needed should be a no-op."""
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+    _insert_rows_directly(db_path, 5)
+    assert history_module.auto_cleanup_if_needed(str(db_path)) is None
+    assert history_module.get_row_count(str(db_path)) == 5
+
+
+def test_auto_cleanup_trims_rows_above_ceiling(tmp_path, monkeypatch):
+    """Rows inserted directly above the ceiling should be pruned."""
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+    excess = 10
+    total = history_module._MAX_HISTORY_ROWS + excess
+    _insert_rows_directly(db_path, total)
+
+    assert history_module.get_row_count(str(db_path)) == total  # confirm setup
+
+    deleted = history_module.auto_cleanup_if_needed(str(db_path))
+
+    assert deleted == excess
+    assert history_module.get_row_count(str(db_path)) == history_module._MAX_HISTORY_ROWS
+
+
+def test_auto_cleanup_logs_maintenance_event(tmp_path, monkeypatch):
+    """Successful cleanup should emit a db_maintenance log event."""
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+    _insert_rows_directly(db_path, history_module._MAX_HISTORY_ROWS + 2)
+
+    events = []
+    monkeypatch.setattr(
+        history_module,
+        "log_event",
+        lambda event, **kwargs: events.append(event),
+    )
+
+    history_module.auto_cleanup_if_needed(str(db_path))
+    assert "db_maintenance" in events
+
+
+def test_auto_cleanup_at_exact_ceiling_is_noop(tmp_path, monkeypatch):
+    """A DB at exactly _MAX_HISTORY_ROWS should not trigger any deletion."""
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+    _insert_rows_directly(db_path, history_module._MAX_HISTORY_ROWS)
+    assert history_module.auto_cleanup_if_needed(str(db_path)) is None
 
 
 def test_history_source_contains_no_fstring_sql():

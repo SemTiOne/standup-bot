@@ -13,7 +13,7 @@ pip install -e ".[dev]"
 ## Running Tests
 
 ```bash
-pytest tests/ -v
+python -m pytest tests/ -v
 # With coverage
 pytest tests/ --cov=standup --cov-report=term-missing
 ```
@@ -24,10 +24,10 @@ pytest tests/ --cov=standup --cov-report=term-missing
 - **Docstrings** on all modules, classes, and public functions
 - **`rich`** for all terminal output — no plain `print()` calls in production code
 - **`validator.py`** is the single source of truth for all validation — do not add validation logic elsewhere
-- All validator functions must return `Tuple[bool, str]` and never raise exceptions
+- All validator functions must return `tuple[bool, str]` and never raise exceptions
 - All regex patterns in `security.py` must be precompiled at module level with `re.compile()`
 - Never log raw API keys — always use `mask_api_key()`
-- Support Python 3.9+ — use `Optional[X]` and `Union[X, Y]` from `typing`, not `X | Y`
+- Requires Python 3.10+ — use `X | None` instead of `Optional[X]`, `X | Y` instead of `Union[X, Y]`, and built-in generics (`list[str]`, `dict[str, int]`, `tuple[bool, str]`) instead of importing `List`, `Dict`, or `Tuple` from `typing`
 
 ## Adding a New LLM Provider
 
@@ -42,7 +42,7 @@ pytest tests/ --cov=standup --cov-report=term-missing
 
 1. Fork the repo and create a feature branch
 2. Write tests for new functionality
-3. Ensure all tests pass: `pytest tests/ -v`
+3. Ensure all tests pass: `python -m pytest tests/ -v`
 4. Update `CHANGELOG.md` under `[Unreleased]`
 5. Open a PR with a clear description of the change
 

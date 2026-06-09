@@ -12,7 +12,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 MAX_COMMIT_MESSAGE_LENGTH = 500
 MAX_COMMITS_PER_RUN = 200
@@ -48,11 +48,14 @@ VALID_TEMPLATE_VARIABLES = (
     "provider",
     "author_email",
 )
+
+# Non-exhaustive list of known Groq model IDs used as setup-wizard suggestions
+# and documentation.  Validation accepts any non-empty string so users are not
+# blocked from using models added after this list was written.
 KNOWN_GROQ_MODELS = (
     "llama-3.1-8b-instant",
     "llama-3.3-70b-versatile",
     "mixtral-8x7b-32768",
-    "llama3-8b-8192",
 )
 
 
@@ -105,7 +108,7 @@ def sanitize_path(path: str) -> str:
             return cleaned
 
 
-def validate_path_safety(path: str) -> Tuple[bool, str]:
+def validate_path_safety(path: str) -> tuple[bool, str]:
     """
     Perform defense-in-depth validation for filesystem paths.
 
@@ -184,7 +187,7 @@ def _path_is_within(path: Path, parent: Path) -> bool:
         return False
 
 
-def validate_repo_path(path: str) -> Tuple[bool, str]:
+def validate_repo_path(path: str) -> tuple[bool, str]:
     """
     Validate that a repo path is absolute, safe, and looks like a git repo.
 
@@ -214,7 +217,7 @@ def validate_repo_path(path: str) -> Tuple[bool, str]:
     return True, ""
 
 
-def validate_author_email(email: str) -> Tuple[bool, str]:
+def validate_author_email(email: str) -> tuple[bool, str]:
     """
     Validate author email format, allowing an empty value.
 
@@ -234,7 +237,7 @@ def validate_author_email(email: str) -> Tuple[bool, str]:
     return False, f"Invalid email format: {email!r}"
 
 
-def validate_hours_lookback(value: Any) -> Tuple[bool, str]:
+def validate_hours_lookback(value: Any) -> tuple[bool, str]:
     """
     Validate a lookback hour value.
 
@@ -259,7 +262,7 @@ def validate_hours_lookback(value: Any) -> Tuple[bool, str]:
     return True, ""
 
 
-def validate_tone(value: str) -> Tuple[bool, str]:
+def validate_tone(value: str) -> tuple[bool, str]:
     """
     Validate the configured standup tone.
 
@@ -279,7 +282,7 @@ def validate_tone(value: str) -> Tuple[bool, str]:
     return False, f"tone must be one of {VALID_TONES}, got: {value!r}"
 
 
-def validate_slack_webhook(url: str) -> Tuple[bool, str]:
+def validate_slack_webhook(url: str) -> tuple[bool, str]:
     """
     Validate a Slack webhook URL, allowing an empty value.
 
@@ -302,7 +305,7 @@ def validate_slack_webhook(url: str) -> Tuple[bool, str]:
     )
 
 
-def validate_boolean(value: Any, field_name: str) -> Tuple[bool, str]:
+def validate_boolean(value: Any, field_name: str) -> tuple[bool, str]:
     """
     Validate that a config field is a boolean.
 
@@ -321,7 +324,7 @@ def validate_boolean(value: Any, field_name: str) -> Tuple[bool, str]:
     return False, f"{field_name} must be a boolean."
 
 
-def validate_rate_limit_config(rate_config: Any) -> Tuple[bool, str]:
+def validate_rate_limit_config(rate_config: Any) -> tuple[bool, str]:
     """
     Validate the ``rate_limit`` config block.
 
@@ -337,7 +340,7 @@ def validate_rate_limit_config(rate_config: Any) -> Tuple[bool, str]:
     if not isinstance(rate_config, dict):
         return False, "rate_limit must be a JSON object."
 
-    errors: List[str] = []
+    errors: list[str] = []
 
     ok, msg = validate_boolean(rate_config.get("enabled"), "rate_limit.enabled")
     if not ok:
@@ -364,7 +367,7 @@ def validate_rate_limit_config(rate_config: Any) -> Tuple[bool, str]:
     return (False, " | ".join(errors)) if errors else (True, "")
 
 
-def validate_provider_config(provider_config: Any) -> Tuple[bool, str]:
+def validate_provider_config(provider_config: Any) -> tuple[bool, str]:
     """
     Validate the provider config block.
 
@@ -384,7 +387,7 @@ def validate_provider_config(provider_config: Any) -> Tuple[bool, str]:
     if name not in VALID_PROVIDERS:
         return False, f"provider.name must be one of {VALID_PROVIDERS}, got: {name!r}"
 
-    errors: List[str] = []
+    errors: list[str] = []
 
     ollama_cfg = provider_config.get("ollama", {})
     if not isinstance(ollama_cfg, dict):
@@ -402,10 +405,8 @@ def validate_provider_config(provider_config: Any) -> Tuple[bool, str]:
         errors.append("provider.groq must be a JSON object.")
     else:
         groq_model = groq_cfg.get("model", "")
-        if groq_model not in KNOWN_GROQ_MODELS:
-            errors.append(
-                f"provider.groq.model must be one of {KNOWN_GROQ_MODELS}, got: {groq_model!r}"
-            )
+        if not isinstance(groq_model, str) or not groq_model.strip():
+            errors.append("provider.groq.model must be a non-empty string.")
         api_key = groq_cfg.get("api_key", "")
         if api_key and (not isinstance(api_key, str) or not api_key.startswith("gsk_")):
             errors.append("provider.groq.api_key must start with 'gsk_' when provided.")
@@ -413,7 +414,7 @@ def validate_provider_config(provider_config: Any) -> Tuple[bool, str]:
     return (False, " | ".join(errors)) if errors else (True, "")
 
 
-def validate_quality_config(quality_config: Any) -> Tuple[bool, str]:
+def validate_quality_config(quality_config: Any) -> tuple[bool, str]:
     """
     Validate the ``quality`` config block.
 
@@ -429,7 +430,7 @@ def validate_quality_config(quality_config: Any) -> Tuple[bool, str]:
     if not isinstance(quality_config, dict):
         return False, "quality must be a JSON object."
 
-    errors: List[str] = []
+    errors: list[str] = []
 
     ok, msg = validate_boolean(quality_config.get("enabled"), "quality.enabled")
     if not ok:
@@ -451,7 +452,7 @@ def validate_quality_config(quality_config: Any) -> Tuple[bool, str]:
     return (False, " | ".join(errors)) if errors else (True, "")
 
 
-def validate_template_string(template_str: Any) -> Tuple[bool, str]:
+def validate_template_string(template_str: Any) -> tuple[bool, str]:
     """
     Validate a custom template body.
 
@@ -485,7 +486,7 @@ def validate_template_string(template_str: Any) -> Tuple[bool, str]:
     return True, ""
 
 
-def validate_custom_templates_config(custom_templates: Any) -> Tuple[bool, str]:
+def validate_custom_templates_config(custom_templates: Any) -> tuple[bool, str]:
     """
     Validate the ``custom_templates`` config block.
 
@@ -506,7 +507,7 @@ def validate_custom_templates_config(custom_templates: Any) -> Tuple[bool, str]:
             f"custom_templates must contain at most {MAX_CUSTOM_TEMPLATES} templates.",
         )
 
-    errors: List[str] = []
+    errors: list[str] = []
     for name, template_str in custom_templates.items():
         if not isinstance(name, str) or not _SAFE_TEMPLATE_NAME_RE.match(name):
             errors.append(
@@ -521,8 +522,8 @@ def validate_custom_templates_config(custom_templates: Any) -> Tuple[bool, str]:
 
 
 def validate_template_name(
-    template_name: Any, custom_templates: Optional[Dict[str, str]] = None
-) -> Tuple[bool, str]:
+    template_name: Any, custom_templates: dict[str, str] | None = None
+) -> tuple[bool, str]:
     """
     Validate that a selected template exists.
 
@@ -546,7 +547,7 @@ def validate_template_name(
     return False, f"template must be one of {sorted(available)}, got: {template_name!r}"
 
 
-def validate_resource_limits(config: dict) -> Tuple[bool, List[str]]:
+def validate_resource_limits(config: dict) -> tuple[bool, list[str]]:
     """
     Validate that config does not request excessive resource consumption.
 
@@ -559,7 +560,7 @@ def validate_resource_limits(config: dict) -> Tuple[bool, List[str]]:
     Raises:
         None.
     """
-    errors: List[str] = []
+    errors: list[str] = []
     repos = config.get("repos", [])
     if isinstance(repos, list) and len(repos) > MAX_REPO_COUNT:
         errors.append(f"repos must contain at most {MAX_REPO_COUNT} entries.")
@@ -642,7 +643,7 @@ def validate_positive_int_arg(
     return parsed
 
 
-def validate_cli_args(args: argparse.Namespace, config: dict) -> List[str]:
+def validate_cli_args(args: argparse.Namespace, config: dict) -> list[str]:
     """
     Perform cross-argument CLI validation.
 
@@ -656,7 +657,7 @@ def validate_cli_args(args: argparse.Namespace, config: dict) -> List[str]:
     Raises:
         None.
     """
-    errors: List[str] = []
+    errors: list[str] = []
 
     if getattr(args, "hours", None) and getattr(args, "week", False):
         errors.append("--hours and --week are mutually exclusive.")
@@ -688,7 +689,7 @@ def validate_cli_args(args: argparse.Namespace, config: dict) -> List[str]:
     return errors
 
 
-def validate_full_config(config: dict) -> Tuple[bool, List[str]]:
+def validate_full_config(config: dict) -> tuple[bool, list[str]]:
     """
     Validate the entire config and collect all errors.
 
@@ -701,7 +702,7 @@ def validate_full_config(config: dict) -> Tuple[bool, List[str]]:
     Raises:
         None.
     """
-    errors: List[str] = []
+    errors: list[str] = []
 
     repos = config.get("repos", [])
     if not isinstance(repos, list):
@@ -770,7 +771,7 @@ def validate_full_config(config: dict) -> Tuple[bool, List[str]]:
     return len(errors) == 0, errors
 
 
-def validate_setup_input(field: str, raw_input: str) -> Tuple[bool, str]:
+def validate_setup_input(field: str, raw_input: str) -> tuple[bool, str]:
     """
     Dispatch setup-wizard validation by field name.
 
@@ -810,7 +811,7 @@ def validate_setup_input(field: str, raw_input: str) -> Tuple[bool, str]:
     return validator(raw_input)
 
 
-def _validate_cooldown_minutes(value: str) -> Tuple[bool, str]:
+def _validate_cooldown_minutes(value: str) -> tuple[bool, str]:
     try:
         parsed = int(value)
     except (TypeError, ValueError):
@@ -820,7 +821,7 @@ def _validate_cooldown_minutes(value: str) -> Tuple[bool, str]:
     return True, ""
 
 
-def _validate_max_calls(value: str) -> Tuple[bool, str]:
+def _validate_max_calls(value: str) -> tuple[bool, str]:
     try:
         parsed = int(value)
     except (TypeError, ValueError):
@@ -830,35 +831,41 @@ def _validate_max_calls(value: str) -> Tuple[bool, str]:
     return True, ""
 
 
-def _validate_provider_name(value: str) -> Tuple[bool, str]:
+def _validate_provider_name(value: str) -> tuple[bool, str]:
     lowered = sanitize_string(value).lower()
     if lowered in VALID_PROVIDERS:
         return True, ""
     return False, f"provider must be one of {VALID_PROVIDERS}, got: {value!r}"
 
 
-def _validate_ollama_model(value: str) -> Tuple[bool, str]:
+def _validate_ollama_model(value: str) -> tuple[bool, str]:
     normalized = sanitize_string(value)
     if normalized:
         return True, ""
     return False, "ollama model must be a non-empty string."
 
 
-def _validate_ollama_base_url(value: str) -> Tuple[bool, str]:
+def _validate_ollama_base_url(value: str) -> tuple[bool, str]:
     normalized = sanitize_string(value)
     if _URL_RE.match(normalized):
         return True, ""
     return False, f"ollama base_url must be a valid URL, got: {normalized!r}"
 
 
-def _validate_groq_model(value: str) -> Tuple[bool, str]:
+def _validate_groq_model(value: str) -> tuple[bool, str]:
+    """Accept any non-empty Groq model string.
+
+    KNOWN_GROQ_MODELS is used by the setup wizard for suggestions only; it is
+    not an exhaustive allowlist.  Rejecting unknown strings would prevent users
+    from using models added after this file was last updated.
+    """
     normalized = sanitize_string(value)
-    if normalized in KNOWN_GROQ_MODELS:
+    if normalized:
         return True, ""
-    return False, f"groq model must be one of {KNOWN_GROQ_MODELS}, got: {normalized!r}"
+    return False, "Groq model must be a non-empty string."
 
 
-def _validate_groq_api_key_field(value: str) -> Tuple[bool, str]:
+def _validate_groq_api_key_field(value: str) -> tuple[bool, str]:
     normalized = sanitize_string(value, max_length=200)
     if normalized == "":
         return True, ""
@@ -867,14 +874,14 @@ def _validate_groq_api_key_field(value: str) -> Tuple[bool, str]:
     return False, "Groq API key must start with 'gsk_' and be at least 40 characters."
 
 
-def _validate_boolean_text(value: str) -> Tuple[bool, str]:
+def _validate_boolean_text(value: str) -> tuple[bool, str]:
     normalized = sanitize_string(value).lower()
     if normalized in ("true", "false", "yes", "no", "y", "n", "1", "0"):
         return True, ""
     return False, "Enter yes/no or true/false."
 
 
-def _validate_quality_min_score(value: str) -> Tuple[bool, str]:
+def _validate_quality_min_score(value: str) -> tuple[bool, str]:
     try:
         parsed = int(value)
     except (TypeError, ValueError):
@@ -884,7 +891,7 @@ def _validate_quality_min_score(value: str) -> Tuple[bool, str]:
     return True, ""
 
 
-def _validate_template_selection(value: str) -> Tuple[bool, str]:
+def _validate_template_selection(value: str) -> tuple[bool, str]:
     return validate_template_name(sanitize_string(value), {})
 
 

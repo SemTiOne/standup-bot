@@ -7,7 +7,6 @@ StandupBot can surface confidence and optionally improve low-scoring output.
 
 import json
 import re
-from typing import Dict, List
 
 from standup.llm.base import BaseLLMProvider
 from standup.llm.groq_provider import GroqProvider
@@ -30,8 +29,13 @@ Standup to evaluate:
 
 _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
+# Timeout for Ollama scoring requests.  Shorter than the generation timeout
+# (60 s) because the scoring prompt is much lighter, but long enough to
+# tolerate a cold model on a slow machine.
+_OLLAMA_SCORING_TIMEOUT = 30.0
 
-def _fallback_score() -> Dict[str, object]:
+
+def _fallback_score() -> dict[str, object]:
     """
     Build the default score payload used on parsing or provider failure.
 
@@ -47,7 +51,7 @@ def _fallback_score() -> Dict[str, object]:
     return {"score": 0, "issues": [], "strengths": []}
 
 
-def _extract_json(raw_text: str) -> Dict[str, object]:
+def _extract_json(raw_text: str) -> dict[str, object]:
     """
     Parse a score payload from raw model output.
 
@@ -89,7 +93,7 @@ def _extract_json(raw_text: str) -> Dict[str, object]:
     }
 
 
-def _score_with_ollama(standup_text: str, provider: OllamaProvider) -> Dict[str, object]:
+def _score_with_ollama(standup_text: str, provider: OllamaProvider) -> dict[str, object]:
     """
     Run the quality evaluation prompt directly against Ollama.
 
@@ -107,19 +111,19 @@ def _score_with_ollama(standup_text: str, provider: OllamaProvider) -> Dict[str,
     try:
         import ollama  # type: ignore[import]
 
-        client = ollama.Client(host=provider.base_url)
+        client = ollama.Client(host=provider.base_url, timeout=_OLLAMA_SCORING_TIMEOUT)
         response = client.chat(
             model=provider.model,
             messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0, "timeout": 30},
+            options={"temperature": 0},
             format="json",
         )
-        return _extract_json(response["message"]["content"])
+        return _extract_json(response["message"]["content"] or "")
     except Exception:
         return _fallback_score()
 
 
-def _score_with_groq(standup_text: str, provider: GroqProvider) -> Dict[str, object]:
+def _score_with_groq(standup_text: str, provider: GroqProvider) -> dict[str, object]:
     """
     Run the quality evaluation prompt directly against Groq.
 
@@ -152,7 +156,7 @@ def _score_with_groq(standup_text: str, provider: GroqProvider) -> Dict[str, obj
         return _fallback_score()
 
 
-def score_standup(standup_text: str, provider: BaseLLMProvider) -> Dict[str, object]:
+def score_standup(standup_text: str, provider: BaseLLMProvider) -> dict[str, object]:
     """
     Score a generated standup on a 0-100 scale.
 
@@ -205,7 +209,7 @@ def generate_with_quality_retry(
     tone: str,
     min_score: int,
     max_retries: int = 2,
-) -> Dict[str, object]:
+) -> dict[str, object]:
     """
     Generate a standup and retry with guidance when quality is too low.
 
@@ -230,7 +234,7 @@ def generate_with_quality_retry(
     while int(quality.get("score") or 0) < int(min_score) and retries < max_retries:  # type: ignore[call-overload]
         retries += 1
         issues = quality.get("issues", [])
-        guidance_lines: List[str] = []
+        guidance_lines: list[str] = []
         if isinstance(issues, list) and issues:
             guidance_lines.extend(f"- {issue}" for issue in issues)
         else:

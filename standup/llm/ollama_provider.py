@@ -2,8 +2,6 @@
 llm/ollama_provider.py - Ollama local LLM provider.
 """
 
-from typing import List
-
 import requests
 
 from standup.llm.base import DEFAULT_SYSTEM_PROMPT, BaseLLMProvider, LLMProviderError
@@ -57,7 +55,7 @@ class OllamaProvider(BaseLLMProvider):
                     {"role": "user", "content": prompt},
                 ],
             )
-            content = response["message"]["content"]
+            content = response["message"]["content"] or ""
             if len(content) > MAX_LLM_RESPONSE_LENGTH:
                 log_event("llm_response_truncated", provider="ollama", model=self.model)
                 content = content[:MAX_LLM_RESPONSE_LENGTH]
@@ -113,7 +111,7 @@ class OllamaProvider(BaseLLMProvider):
         """
         return f"Ollama ({self.model})"
 
-    def list_local_models(self) -> List[str]:
+    def list_local_models(self) -> list[str]:
         """
         Return the list of locally pulled model names.
 

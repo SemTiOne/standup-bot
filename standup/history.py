@@ -25,7 +25,6 @@ console = Console()
 _DB_NAME = ".standup_history.db"
 _MAX_STANDUP_LENGTH = 4000
 _MAX_HISTORY_ROWS = 365
-_AUTO_CLEANUP_THRESHOLD = 400
 _MIGRATIONS: List[Tuple[int, str, str]] = [
     (1, "2026-04-26", "Initial schema: standups table with indexes"),
     (2, "2026-04-26", "Add quality_score column to standups"),
@@ -361,9 +360,9 @@ def find_cached_standup(fingerprint: str, tone: str, provider: str) -> Optional[
 
 def _enforce_max_rows(db_path: Optional[str] = None) -> Optional[int]:
     """
-    Unconditionally trim the standups table to _MAX_HISTORY_ROWS.
+    Unconditionally trim the standups table to ``_MAX_HISTORY_ROWS``.
 
-    Called after every save_standup() to guarantee the table never
+    Called after every ``save_standup()`` to guarantee the table never
     exceeds the configured row ceiling regardless of how many consecutive
     saves occur.
 
@@ -567,39 +566,24 @@ def get_row_count(db_path: Optional[str] = None) -> int:
 
 def auto_cleanup_if_needed(db_path: Optional[str] = None) -> Optional[int]:
     """
-    Automatically prune the history database when it grows too large.
+    Trim the standups table to ``_MAX_HISTORY_ROWS`` if it has grown beyond
+    that limit.
+
+    Called by ``standup --maintenance``.  Delegates to ``_enforce_max_rows``
+    so the same hard ceiling that runs after every ``save_standup()`` is also
+    applied on demand — no separate threshold or duplicate deletion logic
+    needed.
 
     Args:
         db_path: Optional explicit database path.
 
     Returns:
-        Number of rows deleted, or ``None`` when cleanup was not needed.
+        Number of rows deleted, or ``None`` when the table is within bounds.
 
     Raises:
         None.
     """
-    path = db_path or get_db_path()
-    row_count = get_row_count(path)
-    if row_count <= _AUTO_CLEANUP_THRESHOLD:
-        return None
-    try:
-        with _get_connection(path) as conn:
-            cursor = conn.execute(
-                """
-                DELETE FROM standups
-                WHERE id NOT IN (
-                    SELECT id
-                    FROM standups
-                    ORDER BY created_at DESC, id DESC
-                    LIMIT ?
-                )
-                """,
-                (_MAX_HISTORY_ROWS,),
-            )
-        deleted = int(cursor.rowcount or 0)
-        if deleted > 0:
-            log_event("db_maintenance", operation="auto_cleanup", rows_deleted=deleted)
-        return deleted
-    except sqlite3.Error:
-        log_event("db_error", operation="auto_cleanup")
-        return 0
+    deleted = _enforce_max_rows(db_path)
+    if deleted:
+        log_event("db_maintenance", operation="auto_cleanup", rows_deleted=deleted)
+    return deleted

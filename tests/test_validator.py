@@ -192,11 +192,22 @@ def test_provider_config_unknown_name():
     assert not ok
 
 
-def test_provider_config_groq_unknown_model():
+def test_provider_config_groq_accepts_unlisted_model():
+    """KNOWN_GROQ_MODELS is for display only; any non-empty string is valid."""
     cfg = {
         "name": "groq",
         "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-        "groq": {"api_key": "", "model": "gpt-4"},
+        "groq": {"api_key": "", "model": "some-future-model-id"},
+    }
+    ok, _ = validate_provider_config(cfg)
+    assert ok
+
+
+def test_provider_config_groq_rejects_empty_model():
+    cfg = {
+        "name": "groq",
+        "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
+        "groq": {"api_key": "", "model": ""},
     }
     ok, _ = validate_provider_config(cfg)
     assert not ok
@@ -301,9 +312,20 @@ def test_setup_input_tone():
     assert ok
 
 
-def test_setup_input_groq_model_valid():
+def test_setup_input_groq_model_known():
     ok, _ = validate_setup_input("groq_model", "llama-3.1-8b-instant")
     assert ok
+
+
+def test_setup_input_groq_model_unlisted_accepted():
+    """Unknown model IDs are accepted so users are not blocked by a stale list."""
+    ok, _ = validate_setup_input("groq_model", "llama-4-scout-17b-16e-instruct")
+    assert ok
+
+
+def test_setup_input_groq_model_empty_rejected():
+    ok, _ = validate_setup_input("groq_model", "")
+    assert not ok
 
 
 def test_sanitize_string_strips():

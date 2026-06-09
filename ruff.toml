@@ -1,7 +1,7 @@
 # ruff.toml — standalone config (NOT pyproject.toml format)
 # https://docs.astral.sh/ruff/configuration/#ruff-toml
 
-target-version = "py39"
+target-version = "py310"
 line-length = 100
 
 [lint]
@@ -22,10 +22,6 @@ ignore = [
     "S603",  # subprocess call — used in git_reader for git operations
     "S607",  # partial executable path — used in git_reader
     "B008",  # function call in argument defaults — needed in validators
-    "UP006", # keep Optional[X] for Python 3.9 compatibility
-    "UP007", # keep Union[X, Y] for Python 3.9 compatibility
-    "UP035", # keep typing module imports for Python 3.9 compatibility
-    "N802",  # function name should be lowercase — some test helpers use UPPER
     # E501: long lines are intentional in user-facing strings, argparse help
     # text, regex patterns, and XML/plist templates. Wrapping them reduces
     # readability without improving correctness or security.
