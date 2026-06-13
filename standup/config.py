@@ -6,7 +6,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from rich.console import Console
 
@@ -19,7 +19,7 @@ console = Console()
 CONFIG_PATH = str(Path.home() / ".standup.json")
 USAGE_PATH = str(Path.home() / ".standup_usage.json")
 
-_DEFAULTS: Dict[str, Any] = {
+_DEFAULTS: dict[str, Any] = {
     "repos": [],
     "author_email": "",
     "hours_lookback": 24,
@@ -27,25 +27,11 @@ _DEFAULTS: Dict[str, Any] = {
     "slack_webhook_url": "",
     "provider": {
         "name": "ollama",
-        "ollama": {
-            "base_url": "http://localhost:11434",
-            "model": "llama3",
-        },
-        "groq": {
-            "api_key": "",
-            "model": "llama-3.1-8b-instant",
-        },
+        "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
+        "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
     },
-    "rate_limit": {
-        "cooldown_minutes": 30,
-        "max_calls_per_day": 10,
-        "enabled": True,
-    },
-    "quality": {
-        "enabled": True,
-        "min_score": 0,
-        "show_breakdown": False,
-    },
+    "rate_limit": {"cooldown_minutes": 30, "max_calls_per_day": 10, "enabled": True},
+    "quality": {"enabled": True, "min_score": 0, "show_breakdown": False},
     "noise_filter_enabled": True,
     "template": "default",
     "custom_templates": {},
@@ -74,7 +60,7 @@ def load_config() -> dict:
         console.print(
             f"[yellow]⚠️  No config found at {CONFIG_PATH}. Using defaults. Run: standup --setup[/yellow]"
         )
-        raw_config: Dict[str, Any] = {}
+        raw_config: dict[str, Any] = {}
     else:
         enforce_file_permissions(CONFIG_PATH, label="Config file")
         try:

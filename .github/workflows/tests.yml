@@ -34,8 +34,7 @@ jobs:
         run: pip install "mypy>=1.10.0,<2.0.0" types-requests
       - name: Run mypy
         # mypy >= 1.10 dropped Python 3.9 as a target; 3.10 is the minimum.
-        # The codebase still supports runtime Python 3.9+ — this only affects
-        # the type-narrowing rules applied during analysis.
+        # 3.10 is the minimum supported runtime version.
         run: mypy standup/ --ignore-missing-imports --python-version 3.10
 
   security-scan:
@@ -71,8 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.9 removed: mypy no longer supports it as an analysis target.
-        # Runtime support on 3.9 is preserved — only the CI matrix changed.
+        # 3.9 removed: dropped from python_requires in setup.py. 3.10 is the minimum.
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4

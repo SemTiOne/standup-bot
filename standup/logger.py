@@ -14,7 +14,7 @@ import os
 import stat
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 _LOGGER_NAME = "standupbot"
 _LOG_FILE_NAME = ".standup.log"
@@ -22,54 +22,20 @@ _MAX_LOG_BYTES = 1024 * 1024
 _BACKUP_COUNT = 3
 _ROTATE_EARLY_BYTES = 500 * 1024
 _SENSITIVE_SUBSTRINGS = (
-    "key",
-    "secret",
-    "password",
-    "token",
-    "api",
-    "email",
-    "template",
-    "prompt",
-    "standup_text",
-    "output",
-    "path",
+    "key", "secret", "password", "token", "api", "email",
+    "template", "prompt", "standup_text", "output", "path",
 )
-_SENSITIVE_EXACT_KEYS = frozenset(
-    {
-        "author_email",
-        "commit_message",
-        "error_message",
-        "file_path",
-        "llm_output",
-        "prompt",
-        "standup_text",
-        "template_content",
-    }
-)
-_SAFE_EXACT_KEYS = frozenset(
-    {
-        "cached",
-        "commit_count",
-        "duration_ms",
-        "event",
-        "health_score",
-        "level",
-        "model",
-        "operation",
-        "passed",
-        "provider",
-        "python_version",
-        "quality_score",
-        "repos",
-        "seconds_remaining",
-        "success",
-        "tone",
-        "version",
-        "warned",
-        "failed",
-    }
-)
-_LOGGER: Optional[logging.Logger] = None
+_SENSITIVE_EXACT_KEYS = frozenset({
+    "author_email", "commit_message", "error_message", "file_path",
+    "llm_output", "prompt", "standup_text", "template_content",
+})
+_SAFE_EXACT_KEYS = frozenset({
+    "cached", "commit_count", "duration_ms", "event", "health_score",
+    "level", "model", "operation", "passed", "provider", "python_version",
+    "quality_score", "repos", "seconds_remaining", "success", "tone",
+    "version", "warned", "failed",
+})
+_LOGGER: logging.Logger | None = None
 
 
 def get_log_path() -> str:
@@ -136,7 +102,7 @@ def _sanitize_value(key: str, value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_sanitize_value(normalized_key, item) for item in value]
     if isinstance(value, dict):
-        sanitized: Dict[str, Any] = {}
+        sanitized: dict[str, Any] = {}
         for nested_key, nested_value in value.items():
             sanitized[str(nested_key)] = _sanitize_value(str(nested_key), nested_value)
         return sanitized
@@ -203,7 +169,7 @@ def log_event(event: str, **kwargs: Any) -> None:
         None.
     """
     try:
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "ts": _dt.datetime.now().isoformat(timespec="seconds"),
             "level": "INFO",
             "event": str(event or "unknown"),
@@ -215,7 +181,7 @@ def log_event(event: str, **kwargs: Any) -> None:
         return
 
 
-def read_log_entries(limit: int = 20) -> List[Dict[str, Any]]:
+def read_log_entries(limit: int = 20) -> list[dict[str, Any]]:
     """
     Read structured log entries from disk.
 
@@ -237,7 +203,7 @@ def read_log_entries(limit: int = 20) -> List[Dict[str, Any]]:
     except OSError:
         return []
 
-    entries: List[Dict[str, Any]] = []
+    entries: list[dict[str, Any]] = []
     for line in lines[-safe_limit:]:
         try:
             payload = json.loads(line)
@@ -290,7 +256,7 @@ def get_log_size_bytes() -> int:
         return 0
 
 
-def rotate_logs_if_needed(force_threshold_bytes: Optional[int] = None) -> bool:
+def rotate_logs_if_needed(force_threshold_bytes: int | None = None) -> bool:
     """
     Trigger an early log rotation when the active log exceeds a threshold.
 

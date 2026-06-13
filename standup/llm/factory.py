@@ -1,92 +1,98 @@
 """
-llm/factory.py - Return the correct LLM provider from config or CLI override.
+llm/factory.py - Instantiate the configured LLM provider with fallback logic.
 """
 
 import sys
-from typing import Optional
 
 from rich.console import Console
 
 from standup.llm.base import BaseLLMProvider
 from standup.llm.groq_provider import GroqProvider
 from standup.llm.ollama_provider import OllamaProvider
-from standup.security import sanitize_error_message
+from standup.validator import VALID_PROVIDERS
 
 console = Console()
 
-_VALID_PROVIDERS = ("ollama", "groq")
 
-
-def get_provider(config: dict, override: Optional[str] = None) -> BaseLLMProvider:
+def get_provider(config: dict, override: str | None = None) -> BaseLLMProvider:
     """
-    Return the correct instantiated provider.
+    Return an LLM provider instance for the given config.
 
     Args:
-        config: Full loaded config dict.
-        override: CLI ``--provider`` override.
+        config: Loaded application config.
+        override: Optional one-time provider name override.
 
     Returns:
-        Instantiated provider.
+        Configured ``BaseLLMProvider`` subclass instance.
 
     Raises:
-        ValueError: If provider name is unrecognized.
+        SystemExit: If the provider name is not recognised.
     """
-    name = override if override else config.get("provider", {}).get("name", "ollama")
-    name = str(name).lower()
-
+    name = override or config.get("provider", {}).get("name", "ollama")
     if name == "ollama":
         return OllamaProvider(config)
     if name == "groq":
         return GroqProvider(config)
-    raise ValueError(f"Unknown provider: {name!r}. Valid options: {_VALID_PROVIDERS}")
+    console.print(
+        f"[red]❌ Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}.[/red]"
+    )
+    sys.exit(1)
 
 
-def get_provider_with_fallback(config: dict, override: Optional[str] = None) -> BaseLLMProvider:
+def get_provider_with_fallback(
+    config: dict, override: str | None = None
+) -> BaseLLMProvider:
     """
-    Get the configured provider with automatic fallback to Groq when available.
+    Return an LLM provider, falling back to Groq when Ollama is unavailable.
 
     Args:
         config: Loaded application config.
-        override: CLI ``--provider`` override.
+        override: Optional one-time provider name override.
 
     Returns:
-        Provider instance ready for use.
+        The first available ``BaseLLMProvider`` instance.
 
     Raises:
-        SystemExit: If no provider can be used.
+        SystemExit: If no configured provider is available.
     """
-    try:
-        provider = get_provider(config, override)
-    except ValueError as exc:
-        console.print(f"[red]❌ {sanitize_error_message(exc)}[/red]")
-        sys.exit(1)
+    name = override or config.get("provider", {}).get("name", "ollama")
 
-    if provider.is_available():
-        return provider
-
-    configured_name = str(override or config.get("provider", {}).get("name", "ollama")).lower()
-    if configured_name == "ollama":
-        console.print("[yellow]⚠️  Ollama not available, falling back to Groq...[/yellow]")
-        groq_provider = GroqProvider(config)
-        if groq_provider.is_available():
-            return groq_provider
-
+    if name not in VALID_PROVIDERS:
         console.print(
-            "[red]❌ Neither Ollama nor Groq is available.[/red]\n\n"
-            "[bold]To fix Ollama:[/bold]\n"
-            "  1. Install Ollama: https://ollama.com\n"
-            "  2. Start it:       ollama serve\n"
-            "  3. Pull a model:   ollama pull llama3\n\n"
-            "[bold]To use Groq instead:[/bold]\n"
-            "  1. Get a free key: https://console.groq.com\n"
-            "  2. Set env var:    export GROQ_API_KEY=your_key\n"
-            "  3. Update config:  provider.name = 'groq'\n"
+            f"[red]❌ Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}.[/red]"
         )
         sys.exit(1)
 
+    if name == "ollama":
+        provider = OllamaProvider(config)
+        if provider.is_available():
+            return provider
+        groq_key = (
+            config.get("provider", {}).get("groq", {}).get("api_key", "")
+            or __import__("os").environ.get("GROQ_API_KEY", "")
+        )
+        if not groq_key:
+            console.print(
+                "[red]❌ Ollama is not running and no Groq API key is configured.[/red]\n"
+                "Start Ollama: [bold]ollama serve[/bold]\n"
+                "Or set up Groq: [bold]standup --setup[/bold]"
+            )
+            sys.exit(1)
+        console.print(
+            "[yellow]⚠️  Ollama is not available. Falling back to Groq.[/yellow]"
+        )
+        groq_provider = GroqProvider(config)
+        if not groq_provider.is_available():
+            console.print(
+                "[red]❌ Groq is also unavailable. Check your API key and internet connection.[/red]"
+            )
+            sys.exit(1)
+        return groq_provider
+
+    provider = GroqProvider(config)
+    if provider.is_available():
+        return provider
     console.print(
-        "[red]❌ Groq is not available.[/red]\n"
-        "Check your API key at: https://console.groq.com\n"
-        "Make sure GROQ_API_KEY is set or provider.groq.api_key is in your config."
+        "[red]❌ Groq is not available. Check your API key and internet connection.[/red]"
     )
     sys.exit(1)

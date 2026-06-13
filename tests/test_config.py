@@ -59,7 +59,7 @@ def test_save_config_writes_json(tmp_path, monkeypatch):
         "provider": {
             "name": "ollama",
             "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-            "groq": {"api_key": "", "model": "llama3-8b-8192"},
+            "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
         },
         "rate_limit": {"cooldown_minutes": 30, "max_calls_per_day": 10, "enabled": True},
     }
@@ -82,7 +82,7 @@ def test_save_config_valid_json(tmp_path, monkeypatch):
             "provider": {
                 "name": "ollama",
                 "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-                "groq": {"api_key": "", "model": "llama3-8b-8192"},
+                "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
             },
             "rate_limit": {"cooldown_minutes": 30, "max_calls_per_day": 10, "enabled": True},
         }
@@ -109,7 +109,7 @@ def _valid_config_dict(tmp_path) -> dict:
         "provider": {
             "name": "ollama",
             "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-            "groq": {"api_key": "", "model": "llama3-8b-8192"},
+            "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
         },
         "rate_limit": {"cooldown_minutes": 30, "max_calls_per_day": 10, "enabled": True},
     }

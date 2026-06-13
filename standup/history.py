@@ -12,7 +12,6 @@ import json
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 from rich.console import Console
 
@@ -25,7 +24,7 @@ console = Console()
 _DB_NAME = ".standup_history.db"
 _MAX_STANDUP_LENGTH = 4000
 _MAX_HISTORY_ROWS = 365
-_MIGRATIONS: List[Tuple[int, str, str]] = [
+_MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "2026-04-26", "Initial schema: standups table with indexes"),
     (2, "2026-04-26", "Add quality_score column to standups"),
 ]
@@ -88,8 +87,8 @@ def _sanitize_for_storage(text: str) -> str:
     return sanitized[:_MAX_STANDUP_LENGTH]
 
 
-def _row_to_entry(row: sqlite3.Row) -> Dict[str, object]:
-    repos: List[str]
+def _row_to_entry(row: sqlite3.Row) -> dict[str, object]:
+    repos: list[str]
     try:
         parsed = json.loads(row["repos"])
         repos = parsed if isinstance(parsed, list) else []
@@ -270,7 +269,7 @@ def init_db() -> None:
         )
 
 
-def compute_commit_fingerprint(commits: List[dict]) -> str:
+def compute_commit_fingerprint(commits: list[dict]) -> str:
     """
     Compute a deterministic SHA256 fingerprint from commit hashes.
 
@@ -293,7 +292,7 @@ def compute_commit_fingerprint(commits: List[dict]) -> str:
 
 def find_cached_standup_entry(
     fingerprint: str, tone: str, provider: str
-) -> Optional[Dict[str, object]]:
+) -> dict[str, object] | None:
     """
     Find the most recent cached standup for today matching the fingerprint.
 
@@ -337,7 +336,7 @@ def find_cached_standup_entry(
         return None
 
 
-def find_cached_standup(fingerprint: str, tone: str, provider: str) -> Optional[str]:
+def find_cached_standup(fingerprint: str, tone: str, provider: str) -> str | None:
     """
     Return cached standup text for today's matching commit fingerprint.
 
@@ -358,7 +357,7 @@ def find_cached_standup(fingerprint: str, tone: str, provider: str) -> Optional[
     return str(entry.get("standup_text", ""))
 
 
-def _enforce_max_rows(db_path: Optional[str] = None) -> Optional[int]:
+def _enforce_max_rows(db_path: str | None = None) -> int | None:
     """
     Unconditionally trim the standups table to ``_MAX_HISTORY_ROWS``.
 
@@ -398,7 +397,7 @@ def save_standup(
     model: str,
     tone: str,
     standup_text: str,
-    repos: List[str],
+    repos: list[str],
     hours: int,
     quality_score: int = 0,
 ) -> None:
@@ -452,7 +451,7 @@ def save_standup(
         )
 
 
-def get_history(limit: int = 10) -> List[Dict[str, object]]:
+def get_history(limit: int = 10) -> list[dict[str, object]]:
     """
     Return recent standup history entries.
 
@@ -486,7 +485,7 @@ def get_history(limit: int = 10) -> List[Dict[str, object]]:
         return []
 
 
-def clear_history(older_than_days: Optional[int] = None) -> int:
+def clear_history(older_than_days: int | None = None) -> int:
     """
     Delete history rows, optionally only those older than a day threshold.
 
@@ -518,7 +517,7 @@ def clear_history(older_than_days: Optional[int] = None) -> int:
         return 0
 
 
-def get_db_size_bytes(db_path: Optional[str] = None) -> int:
+def get_db_size_bytes(db_path: str | None = None) -> int:
     """
     Return the database file size in bytes.
 
@@ -538,7 +537,7 @@ def get_db_size_bytes(db_path: Optional[str] = None) -> int:
         return 0
 
 
-def get_row_count(db_path: Optional[str] = None) -> int:
+def get_row_count(db_path: str | None = None) -> int:
     """
     Return the total number of rows in the standups table.
 
@@ -564,7 +563,7 @@ def get_row_count(db_path: Optional[str] = None) -> int:
         return 0
 
 
-def auto_cleanup_if_needed(db_path: Optional[str] = None) -> Optional[int]:
+def auto_cleanup_if_needed(db_path: str | None = None) -> int | None:
     """
     Trim the standups table to ``_MAX_HISTORY_ROWS`` if it has grown beyond
     that limit.

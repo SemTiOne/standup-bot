@@ -9,7 +9,6 @@ import json
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Tuple
 
 from rich.console import Console
 
@@ -65,7 +64,7 @@ def save_usage(usage: dict) -> None:
     enforce_file_permissions(str(path), label="Usage file")
 
 
-def check_cooldown(usage: dict, cooldown_minutes: int) -> Tuple[bool, int]:
+def check_cooldown(usage: dict, cooldown_minutes: int) -> tuple[bool, int]:
     """
     Return whether cooldown allows another call and seconds remaining if blocked.
 
@@ -94,7 +93,7 @@ def check_cooldown(usage: dict, cooldown_minutes: int) -> Tuple[bool, int]:
     return False, int(required - elapsed)
 
 
-def check_daily_cap(usage: dict, max_calls: int) -> Tuple[bool, int]:
+def check_daily_cap(usage: dict, max_calls: int) -> tuple[bool, int]:
     """
     Return whether the caller is under the daily cap.
 
@@ -162,11 +161,7 @@ def enforce_rate_limit(config: dict, force: bool = False) -> None:
 
     allowed, seconds_remaining = check_cooldown(usage, cooldown_minutes)
     if not allowed:
-        log_event(
-            "rate_limit_hit",
-            limit_type="cooldown",
-            seconds_remaining=seconds_remaining,
-        )
+        log_event("rate_limit_hit", limit_type="cooldown", seconds_remaining=seconds_remaining)
         mins = seconds_remaining // 60
         secs = seconds_remaining % 60
         console.print(

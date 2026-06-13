@@ -2,12 +2,10 @@
 formatter.py - Structure commit data into a prompt string for the LLM.
 """
 
-from typing import Dict, List
-
 from standup.security import redact_sensitive_patterns
 
 
-def format_commits_for_prompt(commits: List[dict]) -> str:
+def format_commits_for_prompt(commits: list[dict]) -> str:
     """
     Build a structured summary string from a list of commit dicts.
 
@@ -17,11 +15,11 @@ def format_commits_for_prompt(commits: List[dict]) -> str:
     if not commits:
         return ""
 
-    by_repo: Dict[str, List[dict]] = {}
+    by_repo: dict[str, list[dict]] = {}
     for commit in commits:
         by_repo.setdefault(commit["repo"], []).append(commit)
 
-    lines: List[str] = []
+    lines: list[str] = []
 
     total_commits = len(commits)
     total_insertions = sum(commit.get("insertions", 0) for commit in commits)

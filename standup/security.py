@@ -9,15 +9,13 @@ import sqlite3
 import stat
 import sys
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table
 
 from standup.logger import get_log_path, get_log_size_bytes, log_event
 
-# Tracks file paths already warned about this session on Windows.
-# Prevents duplicate output during bulk operations such as batch saves.
 _PERMISSION_WARNED_PATHS: set = set()
 
 console = Console()
@@ -192,7 +190,7 @@ def enforce_config_permissions(config_path: str) -> None:
     enforce_file_permissions(config_path, label="Config file")
 
 
-def _permission_status(file_path: str, label: str) -> Tuple[str, str, str]:
+def _permission_status(file_path: str, label: str) -> tuple[str, str, str]:
     path = Path(file_path)
     if not path.exists():
         return label, "ℹ️", "Not yet created."
@@ -248,7 +246,7 @@ def run_doctor() -> None:  # noqa: C901
         validate_template_name,
     )
 
-    checks: List[Tuple[str, str, str]] = []
+    checks: list[tuple[str, str, str]] = []
 
     def _record(name: str, status: str, detail: str) -> None:
         checks.append((name, status, detail))
@@ -337,17 +335,17 @@ def run_doctor() -> None:  # noqa: C901
         _record("Repo paths valid", "⚠️", "No repos configured.")
 
     version_info = sys.version_info
-    if version_info >= (3, 9):
+    if version_info >= (3, 10):
         _record(
             "Python version",
             "✅",
-            f"Python {version_info.major}.{version_info.minor}.{version_info.micro} >= 3.9",
+            f"Python {version_info.major}.{version_info.minor}.{version_info.micro} >= 3.10",
         )
     else:
         _record(
             "Python version",
             "❌",
-            f"Python {version_info.major}.{version_info.minor} detected; requires 3.9+",
+            f"Python {version_info.major}.{version_info.minor} detected; requires 3.10+",
         )
 
     missing_dependencies = []

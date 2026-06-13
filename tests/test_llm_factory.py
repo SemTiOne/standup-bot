@@ -12,7 +12,7 @@ _OLLAMA_CONFIG = {
     "provider": {
         "name": "ollama",
         "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-        "groq": {"api_key": "", "model": "llama3-8b-8192"},
+        "groq": {"api_key": "", "model": "llama-3.1-8b-instant"},
     }
 }
 
@@ -20,7 +20,7 @@ _GROQ_CONFIG = {
     "provider": {
         "name": "groq",
         "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
-        "groq": {"api_key": "gsk_" + "a" * 40, "model": "llama3-8b-8192"},
+        "groq": {"api_key": "gsk_" + "a" * 40, "model": "llama-3.1-8b-instant"},
     }
 }
 

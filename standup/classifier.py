@@ -6,22 +6,21 @@ StandupBot can send higher-signal git activity to the LLM.
 """
 
 import re
-from typing import Dict, List
 
 COMMIT_TYPES = {
-    "feat": ("✨", "Feature"),
-    "fix": ("🐛", "Bug Fix"),
-    "refactor": ("♻️", "Refactor"),
-    "test": ("🧪", "Tests"),
-    "docs": ("📝", "Docs"),
-    "chore": ("🔧", "Chore"),
-    "ci": ("⚙️", "CI/CD"),
-    "perf": ("⚡", "Performance"),
-    "style": ("🎨", "Style"),
-    "revert": ("⏪", "Revert"),
-    "merge": ("🔀", "Merge"),
-    "wip": ("🚧", "WIP"),
-    "unknown": ("📌", "Other"),
+    "feat":     ("", "Feature"),
+    "fix":      ("", "Bug Fix"),
+    "refactor": ("", "Refactor"),
+    "test":     ("", "Tests"),
+    "docs":     ("", "Docs"),
+    "chore":    ("", "Chore"),
+    "ci":       ("", "CI/CD"),
+    "perf":     ("", "Performance"),
+    "style":    ("", "Style"),
+    "revert":   ("", "Revert"),
+    "merge":    ("", "Merge"),
+    "wip":      ("", "WIP"),
+    "unknown":  ("", "Other"),
 }
 
 NOISE_PATTERNS = [
@@ -42,29 +41,23 @@ _CONVENTIONAL_RE = re.compile(
 )
 _NOISE_REGEXES = [re.compile(pattern, re.IGNORECASE) for pattern in NOISE_PATTERNS]
 _HEURISTICS = (
-    ("merge", re.compile(r"^(merge|merged)\b", re.IGNORECASE)),
-    ("wip", re.compile(r"^wip\b|work in progress", re.IGNORECASE)),
-    ("revert", re.compile(r"^(revert|rollback)\b", re.IGNORECASE)),
-    ("ci", re.compile(r"\b(ci|cd|workflow|github actions|pipeline)\b", re.IGNORECASE)),
-    ("docs", re.compile(r"\b(doc|docs|readme|changelog|comment)\b", re.IGNORECASE)),
-    ("test", re.compile(r"\b(test|tests|spec|pytest|unittest)\b", re.IGNORECASE)),
+    ("merge",    re.compile(r"^(merge|merged)\b", re.IGNORECASE)),
+    ("wip",      re.compile(r"^wip\b|work in progress", re.IGNORECASE)),
+    ("revert",   re.compile(r"^(revert|rollback)\b", re.IGNORECASE)),
+    ("ci",       re.compile(r"\b(ci|cd|workflow|github actions|pipeline)\b", re.IGNORECASE)),
+    ("docs",     re.compile(r"\b(doc|docs|readme|changelog|comment)\b", re.IGNORECASE)),
+    ("test",     re.compile(r"\b(test|tests|spec|pytest|unittest)\b", re.IGNORECASE)),
     ("refactor", re.compile(r"\b(refactor|cleanup|simplify|restructure)\b", re.IGNORECASE)),
-    ("perf", re.compile(r"\b(perf|performance|optimi[sz]e|faster)\b", re.IGNORECASE)),
-    ("style", re.compile(r"\b(style|format|lint|prettier|black|whitespace)\b", re.IGNORECASE)),
-    ("fix", re.compile(r"\b(fix|bug|hotfix|patch|resolve)\b", re.IGNORECASE)),
-    (
-        "feat",
-        re.compile(
-            r"\b(add|adds|added|implement|implements|implemented|create|introduce|feature)\b",
-            re.IGNORECASE,
-        ),
-    ),
-    (
-        "chore",
-        re.compile(
-            r"\b(chore|deps|dependency|dependencies|bump|release|maintenance)\b", re.IGNORECASE
-        ),
-    ),
+    ("perf",     re.compile(r"\b(perf|performance|optimi[sz]e|faster)\b", re.IGNORECASE)),
+    ("style",    re.compile(r"\b(style|format|lint|prettier|black|whitespace)\b", re.IGNORECASE)),
+    ("fix",      re.compile(r"\b(fix|bug|hotfix|patch|resolve)\b", re.IGNORECASE)),
+    ("feat",     re.compile(
+        r"\b(add|adds|added|implement|implements|implemented|create|introduce|feature)\b",
+        re.IGNORECASE,
+    )),
+    ("chore",    re.compile(
+        r"\b(chore|deps|dependency|dependencies|bump|release|maintenance)\b", re.IGNORECASE
+    )),
 )
 
 
@@ -115,7 +108,7 @@ def is_noise(message: str) -> bool:
     return any(pattern.search(normalized) for pattern in _NOISE_REGEXES)
 
 
-def annotate_commits(commits: List[dict]) -> List[dict]:
+def annotate_commits(commits: list[dict]) -> list[dict]:
     """
     Add commit type metadata without removing any commits.
 
@@ -128,7 +121,7 @@ def annotate_commits(commits: List[dict]) -> List[dict]:
     Raises:
         None.
     """
-    annotated: List[dict] = []
+    annotated: list[dict] = []
     for commit in commits:
         commit_type = classify_commit(commit.get("message", ""))
         emoji, _ = COMMIT_TYPES.get(commit_type, COMMIT_TYPES["unknown"])
@@ -139,7 +132,7 @@ def annotate_commits(commits: List[dict]) -> List[dict]:
     return annotated
 
 
-def filter_and_classify_commits(commits: List[dict]) -> List[dict]:
+def filter_and_classify_commits(commits: list[dict]) -> list[dict]:
     """
     Remove low-signal commits and annotate the remainder with type metadata.
 
@@ -152,7 +145,7 @@ def filter_and_classify_commits(commits: List[dict]) -> List[dict]:
     Raises:
         None.
     """
-    filtered: List[dict] = []
+    filtered: list[dict] = []
     for commit in commits:
         if is_noise(commit.get("message", "")):
             continue
@@ -160,7 +153,7 @@ def filter_and_classify_commits(commits: List[dict]) -> List[dict]:
     return filtered
 
 
-def summarize_by_type(commits: List[dict]) -> Dict[str, int]:
+def summarize_by_type(commits: list[dict]) -> dict[str, int]:
     """
     Count commits by classified type.
 
@@ -173,7 +166,7 @@ def summarize_by_type(commits: List[dict]) -> Dict[str, int]:
     Raises:
         None.
     """
-    summary: Dict[str, int] = {}
+    summary: dict[str, int] = {}
     for commit in commits:
         commit_type = commit.get("type") or classify_commit(commit.get("message", ""))
         summary[commit_type] = summary.get(commit_type, 0) + 1
