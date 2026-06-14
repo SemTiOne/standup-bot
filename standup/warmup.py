@@ -40,8 +40,7 @@ def is_model_warm(provider: OllamaProvider) -> bool:
         data = resp.json()
         running = [m.get("name", "") for m in data.get("models", [])]
         return any(
-            name == provider.model or name.startswith(provider.model + ":")
-            for name in running
+            name == provider.model or name.startswith(provider.model + ":") for name in running
         )
     except Exception:
         return False

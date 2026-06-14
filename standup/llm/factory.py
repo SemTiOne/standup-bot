@@ -33,14 +33,10 @@ def get_provider(config: dict, override: str | None = None) -> BaseLLMProvider:
         return OllamaProvider(config)
     if name == "groq":
         return GroqProvider(config)
-    raise ValueError(
-        f"Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}."
-    )
+    raise ValueError(f"Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}.")
 
 
-def get_provider_with_fallback(
-    config: dict, override: str | None = None
-) -> BaseLLMProvider:
+def get_provider_with_fallback(config: dict, override: str | None = None) -> BaseLLMProvider:
     """
     Return an LLM provider, falling back to Groq when Ollama is unavailable.
 
@@ -57,9 +53,7 @@ def get_provider_with_fallback(
     name = override or config.get("provider", {}).get("name", "ollama")
 
     if name not in VALID_PROVIDERS:
-        console.print(
-            f"[red]Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}.[/red]"
-        )
+        console.print(f"[red]Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}.[/red]")
         sys.exit(1)
 
     if name == "ollama":
@@ -68,9 +62,7 @@ def get_provider_with_fallback(
             return provider
         # Attempt Groq fallback — rely on is_available() to determine
         # whether Groq can actually serve requests.
-        console.print(
-            "[yellow]Ollama is not available. Falling back to Groq.[/yellow]"
-        )
+        console.print("[yellow]Ollama is not available. Falling back to Groq.[/yellow]")
         groq_provider = GroqProvider(config)
         if groq_provider.is_available():
             return groq_provider
@@ -84,7 +76,5 @@ def get_provider_with_fallback(
     provider = GroqProvider(config)
     if provider.is_available():
         return provider
-    console.print(
-        "[red]Groq is not available. Check your API key and internet connection.[/red]"
-    )
+    console.print("[red]Groq is not available. Check your API key and internet connection.[/red]")
     sys.exit(1)

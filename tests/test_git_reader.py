@@ -13,6 +13,7 @@ from standup.validator import MAX_COMMIT_MESSAGE_LENGTH, MAX_COMMITS_PER_RUN
 # _infer_modules
 # ---------------------------------------------------------------------------
 
+
 def test_infer_modules_nested():
     files = ["src/auth/login.py", "src/models/user.py", "tests/unit/test_auth.py"]
     modules = _infer_modules(files)
@@ -53,9 +54,9 @@ def test_infer_modules_two_component_src():
 def test_infer_modules_mixed_depths():
     """Two- and three-component paths in the same commit are handled correctly."""
     files = [
-        "README.md",            # 1-level  → README.md
-        "src/app.py",           # 2-level  → src
-        "src/auth/login.py",    # 3-level  → auth
+        "README.md",  # 1-level  → README.md
+        "src/app.py",  # 2-level  → src
+        "src/auth/login.py",  # 3-level  → auth
     ]
     modules = _infer_modules(files)
     assert "README.md" in modules
@@ -66,6 +67,7 @@ def test_infer_modules_mixed_depths():
 # ---------------------------------------------------------------------------
 # get_recent_commits (integration — requires git)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def git_repo(tmp_path):

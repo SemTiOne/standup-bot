@@ -8,19 +8,19 @@ StandupBot can send higher-signal git activity to the LLM.
 import re
 
 COMMIT_TYPES = {
-    "feat":     ("", "Feature"),
-    "fix":      ("", "Bug Fix"),
+    "feat": ("", "Feature"),
+    "fix": ("", "Bug Fix"),
     "refactor": ("", "Refactor"),
-    "test":     ("", "Tests"),
-    "docs":     ("", "Docs"),
-    "chore":    ("", "Chore"),
-    "ci":       ("", "CI/CD"),
-    "perf":     ("", "Performance"),
-    "style":    ("", "Style"),
-    "revert":   ("", "Revert"),
-    "merge":    ("", "Merge"),
-    "wip":      ("", "WIP"),
-    "unknown":  ("", "Other"),
+    "test": ("", "Tests"),
+    "docs": ("", "Docs"),
+    "chore": ("", "Chore"),
+    "ci": ("", "CI/CD"),
+    "perf": ("", "Performance"),
+    "style": ("", "Style"),
+    "revert": ("", "Revert"),
+    "merge": ("", "Merge"),
+    "wip": ("", "WIP"),
+    "unknown": ("", "Other"),
 }
 
 NOISE_PATTERNS = [
@@ -41,23 +41,29 @@ _CONVENTIONAL_RE = re.compile(
 )
 _NOISE_REGEXES = [re.compile(pattern, re.IGNORECASE) for pattern in NOISE_PATTERNS]
 _HEURISTICS = (
-    ("merge",    re.compile(r"^(merge|merged)\b", re.IGNORECASE)),
-    ("wip",      re.compile(r"^wip\b|work in progress", re.IGNORECASE)),
-    ("revert",   re.compile(r"^(revert|rollback)\b", re.IGNORECASE)),
-    ("ci",       re.compile(r"\b(ci|cd|workflow|github actions|pipeline)\b", re.IGNORECASE)),
-    ("docs",     re.compile(r"\b(doc|docs|readme|changelog|comment)\b", re.IGNORECASE)),
-    ("test",     re.compile(r"\b(test|tests|spec|pytest|unittest)\b", re.IGNORECASE)),
+    ("merge", re.compile(r"^(merge|merged)\b", re.IGNORECASE)),
+    ("wip", re.compile(r"^wip\b|work in progress", re.IGNORECASE)),
+    ("revert", re.compile(r"^(revert|rollback)\b", re.IGNORECASE)),
+    ("ci", re.compile(r"\b(ci|cd|workflow|github actions|pipeline)\b", re.IGNORECASE)),
+    ("docs", re.compile(r"\b(doc|docs|readme|changelog|comment)\b", re.IGNORECASE)),
+    ("test", re.compile(r"\b(test|tests|spec|pytest|unittest)\b", re.IGNORECASE)),
     ("refactor", re.compile(r"\b(refactor|cleanup|simplify|restructure)\b", re.IGNORECASE)),
-    ("perf",     re.compile(r"\b(perf|performance|optimi[sz]e|faster)\b", re.IGNORECASE)),
-    ("style",    re.compile(r"\b(style|format|lint|prettier|black|whitespace)\b", re.IGNORECASE)),
-    ("fix",      re.compile(r"\b(fix|bug|hotfix|patch|resolve)\b", re.IGNORECASE)),
-    ("feat",     re.compile(
-        r"\b(add|adds|added|implement|implements|implemented|create|introduce|feature)\b",
-        re.IGNORECASE,
-    )),
-    ("chore",    re.compile(
-        r"\b(chore|deps|dependency|dependencies|bump|release|maintenance)\b", re.IGNORECASE
-    )),
+    ("perf", re.compile(r"\b(perf|performance|optimi[sz]e|faster)\b", re.IGNORECASE)),
+    ("style", re.compile(r"\b(style|format|lint|prettier|black|whitespace)\b", re.IGNORECASE)),
+    ("fix", re.compile(r"\b(fix|bug|hotfix|patch|resolve)\b", re.IGNORECASE)),
+    (
+        "feat",
+        re.compile(
+            r"\b(add|adds|added|implement|implements|implemented|create|introduce|feature)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "chore",
+        re.compile(
+            r"\b(chore|deps|dependency|dependencies|bump|release|maintenance)\b", re.IGNORECASE
+        ),
+    ),
 )
 
 

@@ -22,19 +22,53 @@ _MAX_LOG_BYTES = 1024 * 1024
 _BACKUP_COUNT = 3
 _ROTATE_EARLY_BYTES = 500 * 1024
 _SENSITIVE_SUBSTRINGS = (
-    "key", "secret", "password", "token", "api", "email",
-    "template", "prompt", "standup_text", "output", "path",
+    "key",
+    "secret",
+    "password",
+    "token",
+    "api",
+    "email",
+    "template",
+    "prompt",
+    "standup_text",
+    "output",
+    "path",
 )
-_SENSITIVE_EXACT_KEYS = frozenset({
-    "author_email", "commit_message", "error_message", "file_path",
-    "llm_output", "prompt", "standup_text", "template_content",
-})
-_SAFE_EXACT_KEYS = frozenset({
-    "cached", "commit_count", "duration_ms", "event", "health_score",
-    "level", "model", "operation", "passed", "provider", "python_version",
-    "quality_score", "repos", "seconds_remaining", "success", "tone",
-    "version", "warned", "failed",
-})
+_SENSITIVE_EXACT_KEYS = frozenset(
+    {
+        "author_email",
+        "commit_message",
+        "error_message",
+        "file_path",
+        "llm_output",
+        "prompt",
+        "standup_text",
+        "template_content",
+    }
+)
+_SAFE_EXACT_KEYS = frozenset(
+    {
+        "cached",
+        "commit_count",
+        "duration_ms",
+        "event",
+        "health_score",
+        "level",
+        "model",
+        "operation",
+        "passed",
+        "provider",
+        "python_version",
+        "quality_score",
+        "repos",
+        "seconds_remaining",
+        "success",
+        "tone",
+        "version",
+        "warned",
+        "failed",
+    }
+)
 _LOGGER: logging.Logger | None = None
 
 

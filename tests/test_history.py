@@ -216,10 +216,7 @@ def test_enforce_max_rows_deletes_oldest_rows(tmp_path, monkeypatch):
     # After trimming, commit_hash "0", "1", "2" should be gone.
     history_module._enforce_max_rows(str(db_path))
     with history_module._get_connection(str(db_path)) as conn:
-        hashes = {
-            row[0]
-            for row in conn.execute("SELECT commit_hash FROM standups").fetchall()
-        }
+        hashes = {row[0] for row in conn.execute("SELECT commit_hash FROM standups").fetchall()}
     assert "0" not in hashes
     assert "1" not in hashes
     assert "2" not in hashes
