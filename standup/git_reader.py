@@ -42,9 +42,7 @@ def _infer_modules(files: list[str]) -> list[str]:
         parts = Path(file_path).parts
         if len(parts) >= 3:
             modules.add(parts[1])
-        elif len(parts) == 2:
-            modules.add(parts[0])
-        elif len(parts) == 1:
+        elif len(parts) in (1, 2):
             modules.add(parts[0])
     return sorted(modules)
 

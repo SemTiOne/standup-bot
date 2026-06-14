@@ -14,6 +14,10 @@ from standup.validator import (
     VALID_TEMPLATE_VARIABLES,
     validate_template_string,
 )
+# Backward-compatible alias used by test_templates.py
+_MAX_RENDERED_LENGTH = MAX_RENDERED_TEMPLATE_LENGTH
+_MAX_VARIABLE_VALUE_LENGTH = MAX_VARIABLE_VALUE_LENGTH
+
 
 _BUILTIN_TEMPLATES: dict[str, str] = {
     "default": (
@@ -44,6 +48,12 @@ _BUILTIN_TEMPLATES: dict[str, str] = {
         "Impediments: {blockers}"
     ),
 }
+BUILTIN_TEMPLATES = _BUILTIN_TEMPLATES
+
+
+def validate_custom_template(template_str: str) -> tuple[bool, str]:
+    """Validate a custom template string. Alias for ``validate_template_string``."""
+    return validate_template_string(template_str)
 
 _SECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     (
@@ -113,7 +123,7 @@ def get_template(name: str, custom_templates: dict[str, str] | None = None) -> s
         raise KeyError(f"Custom template {name!r} is invalid: {message}")
     if name in _BUILTIN_TEMPLATES:
         return _BUILTIN_TEMPLATES[name]
-    raise KeyError(f"Template {name!r} not found. Run 'standup templates' to list available templates.")
+    raise ValueError(f"Template {name!r} not found. Run 'standup templates' to list available templates.")
 
 
 def parse_llm_output(text: str) -> dict[str, str]:
@@ -138,6 +148,7 @@ def parse_llm_output(text: str) -> dict[str, str]:
         if match:
             extracted = match.group(1).strip()
             extracted = re.sub(r"\*+", "", extracted).strip()
+            extracted = re.sub(r"^[\[\]]+\s*", "", extracted).strip()
             if extracted:
                 sections[key] = extracted
 
@@ -154,6 +165,7 @@ def build_template_variables(
     repos: list[str] | None = None,
     provider: str = "",
     author_email: str = "",
+    now: object = None,
 ) -> dict[str, str]:
     """
     Parse LLM output and assemble the full template substitution context.
@@ -174,7 +186,8 @@ def build_template_variables(
     from datetime import datetime
 
     sections = parse_llm_output(raw_standup_text)
-    now = datetime.now()
+    if now is None:
+        now = datetime.now()
     repo_str = ", ".join(repos) if repos else "n/a"
     return {
         "yesterday": sections.get("yesterday", ""),

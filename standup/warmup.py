@@ -5,17 +5,15 @@ warmup.py - Pre-load the configured LLM model before the first standup run.
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
 
 import requests
 from rich.console import Console
 
+from standup.llm.base import BaseLLMProvider
+from standup.llm.groq_provider import GroqProvider
+from standup.llm.ollama_provider import OllamaProvider
 from standup.logger import log_event
 from standup.security import sanitize_error_message
-
-if TYPE_CHECKING:
-    from standup.llm.base import BaseLLMProvider
-    from standup.llm.ollama_provider import OllamaProvider
 
 console = Console()
 
@@ -51,26 +49,38 @@ def is_model_warm(provider: OllamaProvider) -> bool:
 
 def get_warm_up_script_content(provider_config: dict) -> str:
     """
-    Return a shell script string that runs ``standup warm-up``.
+    Return a platform-appropriate shell script that runs standup warm-up.
 
     Args:
-        provider_config: Provider config block.
+        provider_config: Provider config block (must contain ``name`` key).
 
     Returns:
-        Platform-appropriate shell command string.
+        Shell script string ready to write to disk.
 
     Raises:
         None.
     """
+    provider_name = provider_config.get("name", "ollama")
     python_exe = sys.executable
+
     if sys.platform == "win32":
-        return f'& "{python_exe}" -m standup.main warm-up'
-    return f'"{python_exe}" -m standup.main warm-up'
+        return (
+            f"# StandupBot warm-up script\n"
+            f"# Provider: {provider_name}\n"
+            f'& "{python_exe}" -m standup standup warm-up\n'
+        )
+
+    return (
+        "#!/usr/bin/env bash\n"
+        f"# StandupBot warm-up script\n"
+        f"# Provider: {provider_name}\n"
+        f'"{python_exe}" -m standup standup warm-up\n'
+    )
 
 
 def warm_up_provider(provider: BaseLLMProvider, verbose: bool = True) -> bool:
     """
-    Send a lightweight prompt to load the model into memory.
+    Warm up a provider by delegating to the appropriate implementation.
 
     Args:
         provider: Provider instance to warm up.
@@ -82,19 +92,29 @@ def warm_up_provider(provider: BaseLLMProvider, verbose: bool = True) -> bool:
     Raises:
         None.
     """
-    from standup.llm.groq_provider import GroqProvider
-    from standup.llm.ollama_provider import OllamaProvider
-
     if isinstance(provider, OllamaProvider):
-        return _warm_up_ollama(provider, verbose)
+        return warm_up_ollama(provider, verbose)
     if isinstance(provider, GroqProvider):
         return _warm_up_groq(provider, verbose)
     return _warm_up_generic(provider, verbose)
 
 
-def _warm_up_ollama(provider: OllamaProvider, verbose: bool) -> bool:
+def warm_up_ollama(provider: OllamaProvider, verbose: bool = True) -> bool:
+    """
+    Warm up an Ollama provider by sending a lightweight generation request.
+
+    Args:
+        provider: Configured Ollama provider instance.
+        verbose: Whether to print status messages.
+
+    Returns:
+        ``True`` on success, ``False`` on failure.
+
+    Raises:
+        None.
+    """
     if verbose:
-        console.print(f"[dim]Warming up {provider.get_provider_name()}...[/dim]")
+        console.print(f"[dim]Warming up Ollama ({provider.model})...[/dim]")
     try:
         resp = requests.post(
             f"{provider.base_url}/api/generate",
@@ -103,62 +123,78 @@ def _warm_up_ollama(provider: OllamaProvider, verbose: bool) -> bool:
         )
         if resp.status_code == 200:
             if verbose:
-                console.print(f"[green]✅ {provider.get_provider_name()} is warm.[/green]")
+                console.print(f"[green]Warm-up complete: Ollama ({provider.model})[/green]")
             log_event("warm_up_success", provider="ollama", model=provider.model)
             return True
         if verbose:
-            console.print(
-                f"[yellow]⚠️  Warm-up returned HTTP {resp.status_code}.[/yellow]"
-            )
+            console.print(f"[yellow]Warm-up returned HTTP {resp.status_code}.[/yellow]")
         log_event("warm_up_failed", provider="ollama", status_code=resp.status_code)
         return False
     except Exception as exc:
         if verbose:
-            console.print(
-                f"[yellow]⚠️  Warm-up failed: {sanitize_error_message(exc)}[/yellow]"
-            )
+            console.print(f"[yellow]Warm-up failed: {sanitize_error_message(exc)}[/yellow]")
         log_event("warm_up_failed", provider="ollama", error_type=type(exc).__name__)
         return False
 
 
-def _warm_up_groq(provider: GroqProvider, verbose: bool) -> bool:
+def _warm_up_groq(provider: GroqProvider, verbose: bool = True) -> bool:
+    """
+    Warm up a Groq provider by checking availability.
+
+    Args:
+        provider: Configured Groq provider instance.
+        verbose: Whether to print status messages.
+
+    Returns:
+        ``True`` when Groq is reachable, ``False`` otherwise.
+
+    Raises:
+        None.
+    """
     if verbose:
         console.print("[dim]Checking Groq connectivity...[/dim]")
     try:
-        from groq import Groq  # type: ignore[import]
-
-        client = Groq(api_key=provider.api_key, timeout=10.0)
-        client.chat.completions.create(
-            messages=[{"role": "user", "content": _WARM_UP_PROMPT}],
-            model=provider.model,
-            max_tokens=5,
-        )
+        if provider.is_available():
+            if verbose:
+                console.print("[green]Groq is reachable.[/green]")
+            log_event("warm_up_success", provider="groq")
+            return True
         if verbose:
-            console.print("[green]✅ Groq is reachable.[/green]")
-        log_event("warm_up_success", provider="groq")
-        return True
+            console.print("[yellow]Groq is not available.[/yellow]")
+        log_event("warm_up_failed", provider="groq")
+        return False
     except Exception as exc:
         if verbose:
-            console.print(
-                f"[yellow]⚠️  Groq warm-up failed: {sanitize_error_message(exc)}[/yellow]"
-            )
+            console.print(f"[yellow]Groq warm-up failed: {sanitize_error_message(exc)}[/yellow]")
         log_event("warm_up_failed", provider="groq", error_type=type(exc).__name__)
         return False
 
 
-def _warm_up_generic(provider: BaseLLMProvider, verbose: bool) -> bool:
-    if verbose:
-        console.print(f"[dim]Warming up {provider.get_provider_name()}...[/dim]")
+def _warm_up_generic(provider: BaseLLMProvider, verbose: bool = True) -> bool:
+    """
+    Warm up an unknown provider by checking availability.
+
+    Args:
+        provider: Any provider with an ``is_available`` method.
+        verbose: Whether to print status messages.
+
+    Returns:
+        ``True`` when the provider reports itself as available.
+
+    Raises:
+        None.
+    """
     try:
-        provider.generate_standup(_WARM_UP_PROMPT, "casual")
-        if verbose:
-            console.print("[green]✅ Provider responded.[/green]")
-        log_event("warm_up_success", provider=provider.get_provider_name())
-        return True
+        available = provider.is_available()
+        if verbose and available:
+            console.print("[green]Provider is available.[/green]")
+        log_event(
+            "warm_up_success" if available else "warm_up_failed",
+            provider=type(provider).__name__,
+        )
+        return available
     except Exception as exc:
         if verbose:
-            console.print(
-                f"[yellow]⚠️  Warm-up failed: {sanitize_error_message(exc)}[/yellow]"
-            )
-        log_event("warm_up_failed", provider=provider.get_provider_name(), error_type=type(exc).__name__)
+            console.print(f"[yellow]Warm-up failed: {sanitize_error_message(exc)}[/yellow]")
+        log_event("warm_up_failed", provider=type(provider).__name__, error_type=type(exc).__name__)
         return False

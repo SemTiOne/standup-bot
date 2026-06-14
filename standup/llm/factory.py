@@ -26,17 +26,16 @@ def get_provider(config: dict, override: str | None = None) -> BaseLLMProvider:
         Configured ``BaseLLMProvider`` subclass instance.
 
     Raises:
-        SystemExit: If the provider name is not recognised.
+        ValueError: If the provider name is not recognised.
     """
     name = override or config.get("provider", {}).get("name", "ollama")
     if name == "ollama":
         return OllamaProvider(config)
     if name == "groq":
         return GroqProvider(config)
-    console.print(
-        f"[red]❌ Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}.[/red]"
+    raise ValueError(
+        f"Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}."
     )
-    sys.exit(1)
 
 
 def get_provider_with_fallback(
@@ -59,7 +58,7 @@ def get_provider_with_fallback(
 
     if name not in VALID_PROVIDERS:
         console.print(
-            f"[red]❌ Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}.[/red]"
+            f"[red]Unknown provider: {name!r}. Must be one of {VALID_PROVIDERS}.[/red]"
         )
         sys.exit(1)
 
@@ -67,32 +66,25 @@ def get_provider_with_fallback(
         provider = OllamaProvider(config)
         if provider.is_available():
             return provider
-        groq_key = (
-            config.get("provider", {}).get("groq", {}).get("api_key", "")
-            or __import__("os").environ.get("GROQ_API_KEY", "")
-        )
-        if not groq_key:
-            console.print(
-                "[red]❌ Ollama is not running and no Groq API key is configured.[/red]\n"
-                "Start Ollama: [bold]ollama serve[/bold]\n"
-                "Or set up Groq: [bold]standup --setup[/bold]"
-            )
-            sys.exit(1)
+        # Attempt Groq fallback — rely on is_available() to determine
+        # whether Groq can actually serve requests.
         console.print(
-            "[yellow]⚠️  Ollama is not available. Falling back to Groq.[/yellow]"
+            "[yellow]Ollama is not available. Falling back to Groq.[/yellow]"
         )
         groq_provider = GroqProvider(config)
-        if not groq_provider.is_available():
-            console.print(
-                "[red]❌ Groq is also unavailable. Check your API key and internet connection.[/red]"
-            )
-            sys.exit(1)
-        return groq_provider
+        if groq_provider.is_available():
+            return groq_provider
+        console.print(
+            "[red]Ollama is not running and Groq is also unavailable.[/red]\n"
+            "Start Ollama: [bold]ollama serve[/bold]\n"
+            "Or configure Groq: [bold]standup --setup[/bold]"
+        )
+        sys.exit(1)
 
     provider = GroqProvider(config)
     if provider.is_available():
         return provider
     console.print(
-        "[red]❌ Groq is not available. Check your API key and internet connection.[/red]"
+        "[red]Groq is not available. Check your API key and internet connection.[/red]"
     )
     sys.exit(1)

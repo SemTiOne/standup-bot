@@ -9,7 +9,6 @@ import pytest
 from standup.git_reader import _infer_modules, get_recent_commits
 from standup.validator import MAX_COMMIT_MESSAGE_LENGTH, MAX_COMMITS_PER_RUN
 
-
 # ---------------------------------------------------------------------------
 # _infer_modules
 # ---------------------------------------------------------------------------

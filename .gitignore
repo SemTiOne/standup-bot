@@ -1,6 +1,6 @@
 # --- StandupBot .gitignore ---
 
-# User-specific config and runtime data (never commit these)
+# User-specific config and runtime data
 .standup.json
 .standup_usage.json
 .standup_history.db
@@ -45,10 +45,3 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
-
-# Temporary fix artifacts
-apply_fixes.py
-REPORT.md
-CODEX_PROMPT_v0.2.0.md
-CODEX_PROMPT_v0.2.1.md
-devto-article.md
