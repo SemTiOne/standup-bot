@@ -63,7 +63,7 @@ def get_provider_with_fallback(
         sys.exit(1)
 
     if name == "ollama":
-        provider = OllamaProvider(config)
+        provider: BaseLLMProvider = OllamaProvider(config)
         if provider.is_available():
             return provider
         # Attempt Groq fallback — rely on is_available() to determine

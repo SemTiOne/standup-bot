@@ -6,6 +6,7 @@ bounded so neither template text nor variable values can produce runaway output.
 """
 
 import re
+from datetime import datetime
 
 from standup.validator import (
     MAX_RENDERED_TEMPLATE_LENGTH,
@@ -14,6 +15,7 @@ from standup.validator import (
     VALID_TEMPLATE_VARIABLES,
     validate_template_string,
 )
+
 # Backward-compatible alias used by test_templates.py
 _MAX_RENDERED_LENGTH = MAX_RENDERED_TEMPLATE_LENGTH
 _MAX_VARIABLE_VALUE_LENGTH = MAX_VARIABLE_VALUE_LENGTH
@@ -165,7 +167,7 @@ def build_template_variables(
     repos: list[str] | None = None,
     provider: str = "",
     author_email: str = "",
-    now: object = None,
+    now: datetime | None = None,
 ) -> dict[str, str]:
     """
     Parse LLM output and assemble the full template substitution context.
@@ -183,8 +185,6 @@ def build_template_variables(
     Raises:
         None.
     """
-    from datetime import datetime
-
     sections = parse_llm_output(raw_standup_text)
     if now is None:
         now = datetime.now()
