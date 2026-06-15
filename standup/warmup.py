@@ -40,8 +40,7 @@ def is_model_warm(provider: OllamaProvider) -> bool:
         data = resp.json()
         running = [m.get("name", "") for m in data.get("models", [])]
         return any(
-            name == provider.model or name.startswith(provider.model + ":")
-            for name in running
+            name == provider.model or name.startswith(provider.model + ":") for name in running
         )
     except Exception:
         return False
@@ -63,11 +62,7 @@ def get_warm_up_script_content(provider_config: dict) -> str:
     provider_name = provider_config.get("name", "ollama")
 
     if sys.platform == "win32":
-        return (
-            f"# StandupBot warm-up script\n"
-            f"# Provider: {provider_name}\n"
-            "standup warm-up\n"
-        )
+        return f"# StandupBot warm-up script\n# Provider: {provider_name}\nstandup warm-up\n"
 
     return (
         "#!/usr/bin/env bash\n"

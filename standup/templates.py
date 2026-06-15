@@ -22,11 +22,7 @@ _MAX_VARIABLE_VALUE_LENGTH = MAX_VARIABLE_VALUE_LENGTH
 
 
 _BUILTIN_TEMPLATES: dict[str, str] = {
-    "default": (
-        "**Yesterday:** {yesterday}\n\n"
-        "**Today:** {today}\n\n"
-        "**Blockers:** {blockers}"
-    ),
+    "default": ("**Yesterday:** {yesterday}\n\n**Today:** {today}\n\n**Blockers:** {blockers}"),
     "slack": (
         ":wave: *Daily Standup — {date}*\n\n"
         "*Yesterday:* {yesterday}\n"
@@ -43,12 +39,7 @@ _BUILTIN_TEMPLATES: dict[str, str] = {
         "---\n"
         "_Commits: {commit_count} | Repos: {repos} | Provider: {provider}_"
     ),
-    "jira": (
-        "[Standup {date}]\n"
-        "Done: {yesterday}\n"
-        "Doing: {today}\n"
-        "Impediments: {blockers}"
-    ),
+    "jira": ("[Standup {date}]\nDone: {yesterday}\nDoing: {today}\nImpediments: {blockers}"),
 }
 BUILTIN_TEMPLATES = _BUILTIN_TEMPLATES
 
@@ -56,6 +47,7 @@ BUILTIN_TEMPLATES = _BUILTIN_TEMPLATES
 def validate_custom_template(template_str: str) -> tuple[bool, str]:
     """Validate a custom template string. Alias for ``validate_template_string``."""
     return validate_template_string(template_str)
+
 
 _SECTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     (
@@ -126,7 +118,9 @@ def get_template(name: str, custom_templates: dict[str, str] | None = None) -> s
         raise KeyError(f"Custom template {name!r} is invalid: {message}")
     if name in _BUILTIN_TEMPLATES:
         return _BUILTIN_TEMPLATES[name]
-    raise ValueError(f"Template {name!r} not found. Run 'standup templates' to list available templates.")
+    raise ValueError(
+        f"Template {name!r} not found. Run 'standup templates' to list available templates."
+    )
 
 
 def parse_llm_output(text: str) -> dict[str, str]:
