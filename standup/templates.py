@@ -15,6 +15,7 @@ from standup.validator import (
     VALID_TEMPLATE_VARIABLES,
     validate_template_string,
 )
+
 # Backward-compatible alias used by test_templates.py
 _MAX_RENDERED_LENGTH = MAX_RENDERED_TEMPLATE_LENGTH
 _MAX_VARIABLE_VALUE_LENGTH = MAX_VARIABLE_VALUE_LENGTH
