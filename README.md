@@ -6,7 +6,7 @@ Generate standup updates from recent git activity with a local Ollama model or G
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-## What is new in 0.2.3
+## What is new in 0.2.4
 
 - Fixed Ollama timeout: was silently ignored when passed as a model option; now correctly set on the client
 - Fixed quality scoring: same timeout bug patched in `quality.py`; `_score_with_ollama` no longer hangs on slow hardware

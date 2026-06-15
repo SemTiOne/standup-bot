@@ -84,6 +84,7 @@ def test_get_warm_up_script_content_windows(monkeypatch):
     monkeypatch.setattr("standup.warmup.sys.platform", "win32")
     script = get_warm_up_script_content({"name": "ollama"})
     assert "standup warm-up" in script
+    assert "standup standup" not in script
     assert "Provider: ollama" in script
 
 
@@ -91,6 +92,8 @@ def test_get_warm_up_script_content_posix(monkeypatch):
     monkeypatch.setattr("standup.warmup.sys.platform", "linux")
     script = get_warm_up_script_content({"name": "groq"})
     assert script.startswith("#!/usr/bin/env bash")
+    assert "standup warm-up" in script
+    assert "standup standup" not in script
 
 
 def test_warm_up_provider_groq_path(monkeypatch):
