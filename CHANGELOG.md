@@ -79,6 +79,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `test_setup_input_groq_model_unlisted_accepted` and
   `test_setup_input_groq_model_empty_rejected` to pin the new contract.
 
+### Infrastructure
+- `.gitattributes`: Added to enforce LF line endings across all text files. Without this,
+  `core.autocrlf=true` on Windows fights with ruff's `line-ending = "lf"` setting,
+  causing files edited by ruff to appear perpetually modified in `git status`.
+
 ## [0.2.3] - 2026-06-06
 
 ### Fixed
@@ -98,10 +103,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PyPI classifiers. Python 3.9 reached end-of-life in October 2025 and was already absent
   from the CI test matrix.
 
-### Infrastructure
-- `.gitattributes`: Added to enforce LF line endings across all text files. Without this,
-  `core.autocrlf=true` on Windows fights with ruff's `line-ending = "lf"` setting,
-  causing files edited by ruff to appear perpetually modified in `git status`.
 
 ## [0.2.2] - 2026-06-05
 

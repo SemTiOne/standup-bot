@@ -8,10 +8,13 @@ Generate standup updates from recent git activity with a local Ollama model or G
 
 ## What is new in 0.2.4
 
-- Fixed Ollama timeout: was silently ignored when passed as a model option; now correctly set on the client
-- Fixed quality scoring: same timeout bug patched in `quality.py`; `_score_with_ollama` no longer hangs on slow hardware
-- Unified history cleanup: `auto_cleanup_if_needed` delegates to `_enforce_max_rows` instead of carrying a separate dead threshold
-- Dropped Python 3.9: minimum is now 3.10, matching the CI matrix and mypy analysis target
+- Fixed `_infer_modules`: two-component paths like `tests/test_auth.py` returned the filename instead of the parent directory; now returns `tests`
+- Fixed `auto_cleanup_if_needed`: was unreachable because its threshold (400) exceeded the `_enforce_max_rows` ceiling (365); now delegates directly
+- Fixed quality scoring timeout: `_score_with_ollama` had the same Ollama timeout bug fixed in v0.2.3 but was never patched
+- Fixed startup script: `standup warm-up --install-startup` generated an invalid `standup standup warm-up` command; now outputs `standup warm-up`
+- Groq model validation changed from a hard allowlist to a non-empty string check so users are not blocked by newer models
+- `_get_provider_slug` replaced fragile class-name string matching with explicit `isinstance` checks
+- Modern type annotations enforced throughout (`list[X]`, `X | None`, built-in generics) after dropping Python 3.9
 
 ## Quick Start
 
