@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of the parent directory (`tests`). Fixed with a three-way branch: `parts[1]`
   for three-or-more-component paths, `parts[0]` for two-component paths, and
   `parts[0]` for single-component (root) files.
+- `warmup.py`: `get_warm_up_script_content` generated an invalid
+  `standup standup warm-up` command in the login-time startup script — the
+  `standup` console-script prefix and a `python_exe -m standup warm-up` call
+  were both written into the same line. Fixed to emit a bare `standup warm-up`
+  line, matching the `console_scripts` entry point in `setup.py`.
+- `templates.py`: `get_template` docstring claimed it raises `KeyError` when a
+  template name is not found. The function actually raises `ValueError` for a
+  missing name and reserves `KeyError` for a custom template that exists but
+  fails validation. Docstring corrected to document both exceptions accurately.
 
 ### Changed
 - `validator.py`: Groq model validation changed from a hard allowlist to a
@@ -78,6 +87,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `test_provider_config_groq_rejects_empty_model`. Added
   `test_setup_input_groq_model_unlisted_accepted` and
   `test_setup_input_groq_model_empty_rejected` to pin the new contract.
+- `test_warmup.py`: Added `assert "standup standup" not in script` to both
+  `test_get_warm_up_script_content_windows` and `test_get_warm_up_script_content_posix`
+  to pin the corrected startup-script command and prevent regression.
 
 ### Infrastructure
 - `.gitattributes`: Added to enforce LF line endings across all text files. Without this,
@@ -102,7 +114,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `setup.py`: Dropped Python 3.9 from `python_requires` (now `>=3.10`) and from the
   PyPI classifiers. Python 3.9 reached end-of-life in October 2025 and was already absent
   from the CI test matrix.
-
 
 ## [0.2.2] - 2026-06-05
 
