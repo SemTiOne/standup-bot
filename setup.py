@@ -1,4 +1,4 @@
-﻿from setuptools import find_packages, setup  # type: ignore[import]
+from setuptools import find_packages, setup  # type: ignore[import]
 
 with open("README.md", encoding="utf-8") as file_handle:
     long_description = file_handle.read()

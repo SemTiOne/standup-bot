@@ -1,4 +1,4 @@
-﻿# StandupBot
+# StandupBot
 
 Generate standup updates from recent git activity with a local Ollama model or Groq's free cloud tier.
 
