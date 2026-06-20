@@ -49,6 +49,23 @@ def test_redact_private_ip():
     assert "[REDACTED]" in result
 
 
+def test_redact_private_ip_10_range_fully_redacted():
+    text = "deployed to 10.20.30.40 and 10.0.0.5 last night"
+    result = redact_sensitive_patterns(text)
+    assert "10.20.30.40" not in result
+    assert "10.0.0.5" not in result
+    assert ".40" not in result
+    assert ".5 " not in result
+    assert result.count("[REDACTED]") == 2
+
+
+def test_redact_quoted_multiword_secret():
+    text = 'set password: "my secret phrase" in config'
+    result = redact_sensitive_patterns(text)
+    assert "my secret phrase" not in result
+    assert "[REDACTED]" in result
+
+
 def test_redact_private_hostname():
     text = "deploy to myserver.local"
     result = redact_sensitive_patterns(text)

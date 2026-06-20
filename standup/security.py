@@ -22,8 +22,15 @@ console = Console()
 
 _REDACTED = "[REDACTED]"
 _PATTERNS = [
-    re.compile(r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key)\s*[=:]\s*\S+"),
-    re.compile(r"\b(?:10|172\.(?:1[6-9]|2\d|3[01])|192\.168)\.\d{1,3}\.\d{1,3}\b"),
+    re.compile(
+        r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key)\s*[=:]\s*"
+        r'(?:"[^"]*"|\'[^\']*\'|\S+)'
+    ),
+    re.compile(
+        r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+        r"|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}"
+        r"|192\.168\.\d{1,3}\.\d{1,3})\b"
+    ),
     re.compile(r"\b\w[\w.-]+\.(?:local|internal|corp|lan)\b", re.IGNORECASE),
     re.compile(r"(?i)bearer\s+[A-Za-z0-9\-._~+/]+=*"),
 ]

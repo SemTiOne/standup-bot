@@ -43,7 +43,8 @@ def format_commits_for_prompt(commits: list[dict]) -> str:
             if len(files) > 5:
                 file_str += f" (+{len(files) - 5} more)"
 
-            line = f"- [{time_str}] {commit_emoji} ({commit_type}) {message}".strip()
+            emoji_prefix = f"{commit_emoji} " if commit_emoji else ""
+            line = f"- [{time_str}] {emoji_prefix}({commit_type}) {message}".strip()
             if file_str:
                 line += f" -> files: {file_str}"
             line += f" (+{insertions}/-{deletions})"

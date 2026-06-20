@@ -167,6 +167,7 @@ def _startup_paths() -> dict[str, Path]:
         }
     return {
         "base_dir": Path.home() / ".config" / "systemd" / "user",
+        "script": Path.home() / ".config" / "systemd" / "user" / "standupbot-warmup.sh",
         "definition": Path.home() / ".config" / "systemd" / "user" / "standupbot-warmup.service",
     }
 
@@ -175,7 +176,7 @@ def _startup_definition_content(paths: dict[str, Path], script_content: str) -> 
     """Build platform-specific startup artifact content."""
     if sys.platform == "win32":
         script_path = str(paths["script"])
-        xml_content = f"""<?xml version=\"1.0\" encoding=\"UTF-16\"?>
+        xml_content = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <Task version=\"1.2\" xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit/task\">
   <Triggers>
     <LogonTrigger>
@@ -234,17 +235,18 @@ def _startup_definition_content(paths: dict[str, Path], script_content: str) -> 
         )
         return {"definition": plist}
 
+    script_path = str(paths["script"])
     service = f"""[Unit]
 Description=StandupBot warm-up on login
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -lc '{script_content.strip()}'
+ExecStart=/bin/bash {script_path}
 
 [Install]
 WantedBy=default.target
 """
-    return {"definition": service}
+    return {"script": script_content, "definition": service}
 
 
 def _confirm_action(prompt_text: str) -> bool:
@@ -787,11 +789,8 @@ def main() -> None:  # noqa: C901
     hours = 168 if args.week else args.hours or config.get("hours_lookback", 24)
     started_at = time.perf_counter()
 
-    from standup.rate_limiter import enforce_rate_limit, load_usage, record_call, save_usage
-
-    enforce_rate_limit(config, force=args.force)
-
     from standup.llm.factory import get_provider_with_fallback
+    from standup.rate_limiter import enforce_rate_limit, load_usage, record_call, save_usage
 
     provider = get_provider_with_fallback(config, override=args.provider)  # type: ignore[assignment]
     provider_slug = _get_provider_slug(provider)
@@ -863,6 +862,8 @@ def main() -> None:  # noqa: C901
         cache_time = str(cached_entry.get("created_at", ""))[11:16]
         console.print(f"[dim]⚡ Using cached standup from {cache_time}[/dim]")
     else:
+        enforce_rate_limit(config, force=args.force)
+
         prompt = build_standup_prompt(formatted, tone)
         from standup.llm.base import LLMProviderError
         from standup.quality import generate_with_quality_retry, score_standup

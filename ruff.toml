@@ -19,8 +19,8 @@ select = [
 ]
 ignore = [
     "S101",  # assert statements — used extensively in tests
-    "S603",  # subprocess call — used in git_reader for git operations
-    "S607",  # partial executable path — used in git_reader
+    "S603",  # subprocess call — used in main.py for OS startup integration (schtasks/launchctl/systemctl)
+    "S607",  # partial executable path — same as above; these are well-known system tools on PATH
     "B008",  # function call in argument defaults — needed in validators
     # E501: long lines are intentional in user-facing strings, argparse help
     # text, regex patterns, and XML/plist templates. Wrapping them reduces

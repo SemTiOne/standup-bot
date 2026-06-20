@@ -41,6 +41,34 @@ def test_deep_merge_nested():
     assert result["provider"]["ollama"]["model"] == "llama3"
 
 
+def test_deep_merge_result_shares_no_references_with_base():
+    base = {"provider": {"groq": {"api_key": ""}}}
+    override = {"tone": "formal"}
+    result = _deep_merge(base, override)
+
+    assert result["provider"] is not base["provider"]
+    assert result["provider"]["groq"] is not base["provider"]["groq"]
+
+    result["provider"]["groq"]["api_key"] = "gsk_leaked"
+    assert base["provider"]["groq"]["api_key"] == ""
+
+
+def test_load_config_does_not_leak_api_key_across_calls(tmp_path, monkeypatch):
+    from standup.config import load_config
+
+    cfg_path = tmp_path / ".standup.json"
+    cfg_path.write_text(json.dumps({}))
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_" + "x" * 40)
+    first = load_config()
+    assert first["provider"]["groq"]["api_key"].startswith("gsk_")
+
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    second = load_config()
+    assert second["provider"]["groq"]["api_key"] == ""
+
+
 # ---------------------------------------------------------------------------
 # save_config
 # ---------------------------------------------------------------------------

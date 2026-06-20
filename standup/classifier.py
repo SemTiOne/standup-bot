@@ -8,8 +8,8 @@ StandupBot can send higher-signal git activity to the LLM.
 import re
 
 COMMIT_TYPES = {
-    "feat": ("", "Feature"),
-    "fix": ("", "Bug Fix"),
+    "feat": ("✨", "Feature"),
+    "fix": ("🐛", "Bug Fix"),
     "refactor": ("", "Refactor"),
     "test": ("", "Tests"),
     "docs": ("", "Docs"),

@@ -18,9 +18,9 @@ jobs:
       - name: Install ruff
         run: pip install "ruff>=0.4.4,<1.0.0"
       - name: Lint
-        run: ruff check standup/ tests/
+        run: ruff check standup/ tests/ setup.py
       - name: Format check
-        run: ruff format --check standup/ tests/
+        run: ruff format --check standup/ tests/ setup.py
 
   type-check:
     name: Type Check
@@ -66,7 +66,7 @@ jobs:
   test:
     name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    needs: [lint, type-check, security-scan]
+    needs: [lint, type-check, security-scan, dependency-audit]
     strategy:
       fail-fast: false
       matrix:

@@ -59,6 +59,42 @@ def test_format_commits_contains_stats():
     assert "-7" in result or "7" in result
 
 
+def test_format_commits_no_double_space_when_emoji_present():
+    commits = [
+        {
+            "repo": "my-app",
+            "message": "fix something",
+            "timestamp": "2024-01-15 09:32",
+            "files_changed": [],
+            "insertions": 1,
+            "deletions": 1,
+            "type": "fix",
+            "type_emoji": "🐛",
+        }
+    ]
+    result = format_commits_for_prompt(commits)
+    assert "🐛 (fix) fix something" in result
+    assert "  (fix)" not in result
+
+
+def test_format_commits_no_double_space_when_emoji_absent():
+    commits = [
+        {
+            "repo": "my-app",
+            "message": "bump deps",
+            "timestamp": "2024-01-15 09:32",
+            "files_changed": [],
+            "insertions": 1,
+            "deletions": 1,
+            "type": "chore",
+            "type_emoji": "",
+        }
+    ]
+    result = format_commits_for_prompt(commits)
+    assert "(chore) bump deps" in result
+    assert "  (chore)" not in result
+
+
 def test_format_commits_summary_line():
     result = format_commits_for_prompt(_SAMPLE_COMMITS)
     assert "SUMMARY:" in result
