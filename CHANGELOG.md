@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to StandupBot will be documented in this file.
 
@@ -49,6 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this changelog) from the initial commit onward and was never actually
   stripped by any prior commit despite the commit messages.
 - `setup.py`: added a missing trailing newline (ruff `W292`).
+
+### Tests
+- `test_ollama_provider.py`: Added — `OllamaProvider.generate_standup` had no
+  dedicated test file. Includes a regression test pinning the v0.2.3 fix:
+  asserts `ollama.Client(...)` receives an explicit `timeout` kwarg and that
+  `options` never carries a `"timeout"` key, plus coverage for null-content
+  responses, connection errors, and unknown-model errors.
 
 ## [0.2.4] - 2026-06-09
 
