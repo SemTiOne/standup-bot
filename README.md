@@ -1,4 +1,4 @@
-# StandupBot
+﻿# StandupBot
 
 Generate standup updates from recent git activity with a local Ollama model or Groq's free cloud tier.
 
@@ -6,15 +6,9 @@ Generate standup updates from recent git activity with a local Ollama model or G
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-## What is new in 0.2.4
+## What is new (unreleased)
 
-- Fixed `_infer_modules`: two-component paths like `tests/test_auth.py` returned the filename instead of the parent directory; now returns `tests`
-- Fixed `auto_cleanup_if_needed`: was unreachable because its threshold (400) exceeded the `_enforce_max_rows` ceiling (365); now delegates directly
-- Fixed quality scoring timeout: `_score_with_ollama` had the same Ollama timeout bug fixed in v0.2.3 but was never patched
-- Fixed startup script: `standup warm-up --install-startup` generated an invalid `standup standup warm-up` command; now outputs `standup warm-up`
-- Groq model validation changed from a hard allowlist to a non-empty string check so users are not blocked by newer models
-- `_get_provider_slug` replaced fragile class-name string matching with explicit `isinstance` checks
-- Modern type annotations enforced throughout (`list[X]`, `X | None`, built-in generics) after dropping Python 3.9
+Since 0.2.4: a full security/correctness audit (private-IP redaction, a config-mutation bug that could leak an API key across process calls, a broken Linux systemd unit, and a few other fixes), plus a follow-up fix for missing secret-detection patterns (GitHub tokens, AWS keys, Slack tokens, LLM API keys, credentialed URIs) reported via #2. See `CHANGELOG.md` for the full list.
 
 ## Quick Start
 
@@ -180,6 +174,7 @@ Use `standup warm-up` to pre-load the configured model before your first real ru
 StandupBot treats config, git metadata, templates, provider responses, and local storage as hostile inputs until proven otherwise.
 
 - `~/.standup.json`, `~/.standup_usage.json`, `~/.standup_history.db`, and `~/.standup.log` use restricted permissions on Unix/macOS.
+- Commit messages are scanned for common secret formats — passwords/tokens/API keys, private IPs, internal hostnames, bearer tokens, GitHub PATs, LLM provider keys, AWS access keys, Slack tokens, and credentialed URIs — and redacted before they reach a prompt, storage, or the terminal.
 - Repo paths go through explicit path-safety checks to block traversal tricks, network paths, and unsafe symlinks.
 - Commit messages and LLM responses are length-capped before they reach prompts, storage, or terminal rendering.
 - Custom templates only substitute a fixed allowlist of variables and reject Python-style format syntax.
