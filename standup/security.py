@@ -23,7 +23,8 @@ console = Console()
 _REDACTED = "[REDACTED]"
 _PATTERNS = [
     re.compile(
-        r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key)\s*[=:]\s*"
+        r"(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key"
+        r"|secret[_-]?key|private[_-]?key|auth[_-]?token)\s*[=:]\s*"
         r'(?:"[^"]*"|\'[^\']*\'|\S+)'
     ),
     re.compile(
@@ -33,6 +34,43 @@ _PATTERNS = [
     ),
     re.compile(r"\b\w[\w.-]+\.(?:local|internal|corp|lan)\b", re.IGNORECASE),
     re.compile(r"(?i)bearer\s+[A-Za-z0-9\-._~+/]+=*"),
+]
+
+# Type-tagged patterns for well-known secret formats that don't rely on a
+# nearby trigger word (issue #2). Each is matched independently and replaced
+# with a type-specific tag, e.g. "[REDACTED:GITHUB_TOKEN]", so the redaction
+# reason stays visible without exposing the secret itself.
+#
+# The LLM key pattern's character class deliberately includes "-" and "_"
+# (the base64url alphabet real provider keys use) with no upper length
+# bound close to the prefix. An earlier draft used [A-Za-z0-9]{20,} with
+# no "-"/"_", which stopped matching at the first hyphen in keys like
+# "sk-ant-api03-..." and left the rest of a live key exposed in the
+# "redacted" output.
+_TAGGED_PATTERNS = [
+    (
+        "GITHUB_TOKEN",
+        re.compile(r"\bghp_[A-Za-z0-9]{36}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
+    ),
+    (
+        "API_KEY",
+        re.compile(r"\bsk-(?:ant-api03-|proj-)?[A-Za-z0-9_-]{20,}\b"),
+    ),
+    (
+        "AWS_KEY",
+        re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
+    ),
+    (
+        "SLACK_TOKEN",
+        re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b"),
+    ),
+    (
+        "URI_CREDENTIALS",
+        # Matches the "user:password@" portion of a credentialed URI and
+        # redacts only that segment, leaving scheme/host/path intact so the
+        # rest of the commit message stays readable.
+        re.compile(r"\b[a-zA-Z][a-zA-Z0-9+.-]*://[^\s:@/]+:[^\s@/]+@"),
+    ),
 ]
 _ERROR_PATTERNS = [
     re.compile(r"[A-Za-z]:\\(?:[^\\/:*?\"<>|\r\n]+\\)*[^\\/:*?\"<>|\r\n]*"),
@@ -98,6 +136,11 @@ def redact_sensitive_patterns(text: str) -> str:
         if matches:
             match_count += matches
             text = pattern.sub(_REDACTED, text)
+    for tag, pattern in _TAGGED_PATTERNS:
+        matches = len(pattern.findall(text))
+        if matches:
+            match_count += matches
+            text = pattern.sub(f"[REDACTED:{tag}]", text)
     if text != original:
         console.print(
             "[yellow]⚠️  Sensitive patterns detected and redacted from commit messages.[/yellow]"

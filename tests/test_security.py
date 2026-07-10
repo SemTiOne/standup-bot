@@ -115,3 +115,110 @@ def test_sanitize_error_message_handles_none():
 def test_sanitize_error_message_handles_permission_error():
     message = sanitize_error_message(PermissionError("secret path"))
     assert "Permission was denied" in message
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Issue #2: secret formats without a nearby trigger word
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def test_redact_github_classic_pat():
+    token = "ghp_" + "a" * 36
+    text = f"fix: rotate {token} after leak"
+    result = redact_sensitive_patterns(text)
+    assert token not in result
+    assert "[REDACTED:GITHUB_TOKEN]" in result
+
+
+def test_redact_github_fine_grained_pat():
+    token = "github_pat_" + "A" * 22 + "_" + "B" * 59
+    text = f"fix: rotate {token}"
+    result = redact_sensitive_patterns(text)
+    assert token not in result
+    assert "[REDACTED:GITHUB_TOKEN]" in result
+
+
+def test_redact_anthropic_key_full_key_not_just_prefix():
+    # Regression test: an earlier draft's char class excluded "-"/"_", so it
+    # only matched "sk-ant" and left the rest of the key (which uses the
+    # base64url alphabet, including "-" and "_") exposed after "redaction".
+    key = "sk-ant-api03-" + "aB3" * 20 + "-xY9zZ"
+    text = f"debug: leaked {key} in log"
+    result = redact_sensitive_patterns(text)
+    assert key not in result
+    # No fragment of the key body should survive redaction
+    assert "aB3aB3aB3" not in result
+    assert "[REDACTED:API_KEY]" in result
+
+
+def test_redact_openai_proj_key():
+    key = "sk-proj-" + "a1B2c3D4-e5F6g7H8_i9J0k1L2m3N4o5"
+    text = f"chore: remove {key} from .env"
+    result = redact_sensitive_patterns(text)
+    assert key not in result
+    assert "[REDACTED:API_KEY]" in result
+
+
+def test_redact_aws_access_key():
+    # Concatenated for the same reason as the Slack token above: this is
+    # AWS's own documented example key, but a contiguous literal still
+    # matches the AKIA[0-9A-Z]{16} shape closely enough to trip push
+    # protection.
+    fake_aws_key = "AKIA" + "IOSFODNN7EXAMPLE"
+    text = f"chore: rotate {fake_aws_key} for CI"
+    result = redact_sensitive_patterns(text)
+    assert fake_aws_key not in result
+    assert "[REDACTED:AWS_KEY]" in result
+
+
+def test_redact_slack_bot_token():
+    # Built via concatenation, not a single literal: GitHub's push-protection
+    # secret scanner pattern-matches the raw source text, and a contiguous
+    # "xoxb-..." literal here is shaped enough like a real Slack token to
+    # trip it, even inside a test fixture. The runtime string (and therefore
+    # what the regex under test actually sees) is identical either way.
+    fake_slack_token = "xoxb-" + "1234567890-abcdefghijklmnop"
+    text = f"fix: revoke {fake_slack_token} after leak"
+    result = redact_sensitive_patterns(text)
+    assert fake_slack_token not in result
+    assert "[REDACTED:SLACK_TOKEN]" in result
+
+
+def test_redact_uri_credentials():
+    text = "fix: rotate https://user:hunter2@db.internal/prod"
+    result = redact_sensitive_patterns(text)
+    assert "hunter2" not in result
+    assert "[REDACTED:URI_CREDENTIALS]" in result
+
+
+def test_redact_compound_secret_key_variable():
+    text = "fix: rotate SECRET_KEY=abc123xyz in settings"
+    result = redact_sensitive_patterns(text)
+    assert "abc123xyz" not in result
+
+
+def test_redact_compound_private_key_variable():
+    text = "chore: remove PRIVATE_KEY=abc123xyz from repo"
+    result = redact_sensitive_patterns(text)
+    assert "abc123xyz" not in result
+
+
+def test_redact_compound_auth_token_variable():
+    text = "fix: rotate AUTH_TOKEN=abc123xyz after leak"
+    result = redact_sensitive_patterns(text)
+    assert "abc123xyz" not in result
+
+
+def test_redact_does_not_flag_bare_key_word():
+    # Regression test: a bare "KEY" trigger word (considered and rejected
+    # during the issue #2 discussion) false-positives on ordinary commit
+    # messages that just happen to contain the word "key" before "=".
+    text = "feat: support KEY=VALUE parsing for .env files"
+    result = redact_sensitive_patterns(text)
+    assert result == text
+
+
+def test_redact_does_not_flag_shard_key_column_name():
+    text = "chore: rename SHARD-KEY=tenant_id column"
+    result = redact_sensitive_patterns(text)
+    assert result == text
