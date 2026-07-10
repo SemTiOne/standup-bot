@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `security.py`: `redact_sensitive_patterns()` missed several common secret
+  formats that don't rely on a nearby trigger word (`password=`, `token=`,
+  etc.): GitHub PATs (`ghp_...`, `github_pat_...`), LLM API keys (OpenAI
+  `sk-proj-`, Anthropic `sk-ant-api03-`, DeepSeek `sk-`), AWS access key IDs
+  (`AKIA...`/`ASIA...`), Slack tokens (`xox[baprs]-...`), and URI credentials
+  (`https://user:pass@host`). Each is now redacted with a type-specific tag
+  (`[REDACTED:GITHUB_TOKEN]`, `[REDACTED:AWS_KEY]`, etc.); the original 4
+  patterns keep emitting plain `[REDACTED]`, unchanged. Also extended the
+  trigger-word group with `secret_key`/`private_key`/`auth_token` instead of
+  adding a bare `key` alternative, which false-positives on ordinary commit
+  messages like `feat: support KEY=VALUE parsing for .env files`. Reported
+  in #2; fixed in #3. 12 new regression tests.
+- `validator.py`: removed `_validate_provider_name()` and its `"provider_name"`
+  dispatch entry in `validate_setup_input()`. Dead code — the setup wizard's
+  provider selection is a numbered menu (`1`/`2`), never free text, so this
+  path was never reachable. Confirmed via a full-repo search with zero
+  callers found.
+- `CHANGELOG.md`, `README.md`: brought both up to date with the two most
+  recent fix rounds (this entry and the redaction-pattern fix above), which
+  had landed in code but were never documented. `CHANGELOG.md` also had its
+  UTF-8 BOM reintroduced at some point after the earlier cleanup; stripped
+  again.
 - `security.py`: `redact_sensitive_patterns`'s private-IP pattern for the
   `10.0.0.0/8` range only matched 3 of 4 octets (e.g. `10.20.30.40` redacted as
   `[REDACTED].40`), leaking the last octet of internal IPs into commit text sent

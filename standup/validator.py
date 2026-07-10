@@ -793,7 +793,6 @@ def validate_setup_input(field: str, raw_input: str) -> tuple[bool, str]:
         "slack_webhook_url": lambda value: validate_slack_webhook(sanitize_string(value)),
         "cooldown_minutes": _validate_cooldown_minutes,
         "max_calls_per_day": _validate_max_calls,
-        "provider_name": _validate_provider_name,
         "ollama_model": _validate_ollama_model,
         "ollama_base_url": _validate_ollama_base_url,
         "groq_model": _validate_groq_model,
@@ -829,13 +828,6 @@ def _validate_max_calls(value: str) -> tuple[bool, str]:
     if parsed < 1 or parsed > 50:
         return False, "max_calls_per_day must be between 1 and 50."
     return True, ""
-
-
-def _validate_provider_name(value: str) -> tuple[bool, str]:
-    lowered = sanitize_string(value).lower()
-    if lowered in VALID_PROVIDERS:
-        return True, ""
-    return False, f"provider must be one of {VALID_PROVIDERS}, got: {value!r}"
 
 
 def _validate_ollama_model(value: str) -> tuple[bool, str]:
