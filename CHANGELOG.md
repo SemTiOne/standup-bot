@@ -172,7 +172,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `llm/ollama_provider.py`: `options={"timeout": 60}` was passed as a model parameter
-  (e.g. temperature, top_p) instead of as an HTTP connection timeout — Ollama silently
+  (e.g. temperature, top_p) instead of as an HTTP connection timeout; Ollama silently
   ignored it. Fixed by moving timeout to `ollama.Client(host=..., timeout=60.0)`, which
   propagates correctly to the underlying `httpx.Client` via `**kwargs`.
 
