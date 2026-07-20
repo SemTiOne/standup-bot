@@ -1,0 +1,24 @@
+name: PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  chess-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: SemTiOne/chess-review-bot@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fail-on-blunder: 'false'
+          critical-paths: |
+            *security*
