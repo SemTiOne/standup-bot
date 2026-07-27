@@ -353,7 +353,7 @@ def write_text_restricted(file_path: str, content: str, label: str = "File") -> 
     enforce_file_permissions(file_path, label=label)
     path.write_text(
         content, encoding="utf-8"
-    )
+    )  # lgtm[py/clear-text-storage-sensitive-data]  # safe: owner-only perms set above
 
 
 def enforce_config_permissions(config_path: str) -> None:
