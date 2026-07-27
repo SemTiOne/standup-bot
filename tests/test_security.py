@@ -1,5 +1,6 @@
 """Tests for standup/security.py."""
 
+import json
 import stat
 import sys
 from pathlib import Path
@@ -294,6 +295,35 @@ def test_write_text_restricted_result_is_owner_only_and_correct_content(tmp_path
     assert target.read_text(encoding="utf-8") == '{"a": 1}'
     if sys.platform != "win32":
         assert stat.S_IMODE(target.stat().st_mode) == 0o600
+
+
+def test_write_text_restricted_never_mangles_secret_shaped_content(tmp_path):
+    """write_text_restricted is a generic write primitive and must not
+    guess at caller intent by scanning/scrubbing content, whether a
+    secret belongs on disk is a decision only the caller can make (see
+    config.save_config()'s documented keychain-first, restricted-file
+    fallback). A previous version auto-redacted "detected" secrets
+    here, which would silently corrupt save_config()'s intentional
+    fallback persistence if the detection/redaction pattern mismatch
+    that made it a no-op for Groq keys were ever "fixed"."""
+    from standup.security import write_text_restricted
+
+    target = tmp_path / "secret.json"
+    content = json.dumps({"api_key": "gsk_" + "a" * 40, "webhook": "https://hooks.slack.com/x"})
+    write_text_restricted(str(target), content, label="Test file")
+
+    assert target.read_text(encoding="utf-8") == content
+
+
+def test_redact_sensitive_patterns_redacts_groq_key():
+    """GROQ_KEY must actually be wired into _TAGGED_PATTERNS (the set
+    redact_sensitive_patterns() iterates), not just into a detection-only
+    list. A prior version could report a Groq key as "found" while
+    never actually substituting it out."""
+    key = "gsk_" + "a" * 40
+    result = redact_sensitive_patterns(f"leaked my key {key} in a commit")
+    assert key not in result
+    assert "[REDACTED:GROQ_KEY]" in result
 
 
 def test_write_text_restricted_locks_down_before_content_exists(tmp_path, monkeypatch):

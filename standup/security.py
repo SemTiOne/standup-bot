@@ -58,6 +58,10 @@ _TAGGED_PATTERNS = [
         re.compile(r"\bsk-(?:ant-api03-|proj-)?[A-Za-z0-9_-]{20,}\b"),
     ),
     (
+        "GROQ_KEY",
+        re.compile(r"\bgsk_[A-Za-z0-9_-]{10,}\b"),
+    ),
+    (
         "AWS_KEY",
         re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
     ),
@@ -79,21 +83,6 @@ _ERROR_PATTERNS = [
     re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+"),
     re.compile(r"gsk_[A-Za-z0-9_\-]{10,}"),
 ]
-
-_ALL_SECRET_PATTERNS = (
-    [(tag, pat) for tag, pat in _TAGGED_PATTERNS]
-    + [("TRIGGER_SECRET", pat) for pat in _PATTERNS[:1]]
-    + [("GROQ_KEY", re.compile(r"gsk_[A-Za-z0-9_\-]{10,}"))]
-)
-
-
-def _detect_secrets(text: str) -> list[str]:
-    """Return a list of secret-type tags found in *text*."""
-    found: list[str] = []
-    for tag, pattern in _ALL_SECRET_PATTERNS:
-        if pattern.search(text):
-            found.append(tag)
-    return found
 
 
 def validate_groq_api_key(key: str) -> bool:
@@ -349,9 +338,21 @@ def write_text_restricted(file_path: str, content: str, label: str = "File") -> 
     content exists), then writes the real content, closing that
     window.
 
-    Any secrets detected in *content* via ``_detect_secrets`` are
-    automatically scrubbed (replaced with ``[REDACTED:<TAG>]``)
-    before the write, so clear-text secrets never land on disk.
+    Deliberately does NOT scan or scrub content for secrets: this is
+    a generic write primitive and cannot know whether a given caller's
+    secret-shaped content is an accidental leak or an intentional,
+    already-considered persistence decision (e.g. save_config()'s
+    documented OS-keychain-first, permission-restricted-file-fallback
+    design). An earlier version of this function auto-redacted
+    detected secrets, which (a) was silently non-functional for Groq
+    keys specifically; see the GROQ_KEY note on _TAGGED_PATTERNS;
+    and (b) would, if made to actually work, silently corrupt
+    save_config()'s fallback value on every save in environments
+    without a keychain (headless Linux, CI, Docker), since it can't
+    distinguish that case from an accidental leak. Secret redaction
+    belongs at the call site, where intent is known; see
+    redact_sensitive_patterns() for callers (e.g. commit message
+    formatting) that do want it.
 
     Args:
         file_path: Path to write to.
@@ -361,14 +362,6 @@ def write_text_restricted(file_path: str, content: str, label: str = "File") -> 
     Returns:
         None.
     """
-    secrets = _detect_secrets(content)
-    if secrets:
-        content = redact_sensitive_patterns(content)
-        console.print(
-            f"[yellow]⚠️  Secrets detected in {label} before write; "
-            f"scrubbed ({', '.join(secrets)}).[/yellow]"
-        )
-        log_event("write_scrubbed_secrets", tags=secrets, path=file_path)
     path = Path(file_path)
     path.touch(exist_ok=True)
     enforce_file_permissions(file_path, label=label)
