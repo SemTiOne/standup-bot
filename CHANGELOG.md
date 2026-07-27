@@ -7,7 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `.github/FUNDING.yml`: added GitHub Sponsors configuration.
+- `.github/dependabot.yml`: enabled Dependabot for Python dependencies and
+  GitHub Actions, grouped by ecosystem.
+- `.github/workflows/pr-review.yml`: added chess-review-bot workflow for
+  automated PR reviews via `SemTiOne/chess-review-bot/action@v1`.
+
+### Changed
+- `validator.py`, `README.md`, `CHANGELOG.md`: housekeeping pass from a full
+  repo audit — removed dead `_validate_provider_name()` from validator, updated
+  README descriptions and changelog formatting.
+
 ### Fixed
+- `security.py`: suppressed CodeQL alert `py/clear-text-storage-sensitive-data`
+  (alert #7) on `write_text_restricted()`. Content is now scanned with
+  ``_detect_secrets()`` before every write; any matching secrets are scrubbed
+  (replaced with ``[REDACTED:<TAG>]``) and logged, so clear-text secrets
+  never land on disk. No functional change to callers that already strip
+  secrets before writing.
+- `.github/workflows/tests.yml`: added top-level `permissions: contents: read`
+  to resolve CodeQL alerts #1–#5 (missing permissions block).
+- `security.py` / `config.py`: secrets (Groq API key, Slack webhook) now stored
+  in OS keychain via `keyring` and scrubbed from the on-disk config file.
+  Falls back to config-file storage with a one-time warning when no keychain
+  backend is available (alert #6).
+- `security.py`: added `write_text_restricted()` to close a file-permission race
+  window — the config file is created empty with owner-only perms before any
+  sensitive content is written.
+- `security.py`: added Windows ACL enforcement (`icacls`) for config and DB
+  files, complementing the existing Unix `chmod 600` path.
+- `pr-review.yml`: fixed action reference to
+  `SemTiOne/chess-review-bot/action@v1`.
 - `security.py`: `redact_sensitive_patterns()` missed several common secret
   formats that don't rely on a nearby trigger word (`password=`, `token=`,
   etc.): GitHub PATs (`ghp_...`, `github_pat_...`), LLM API keys (OpenAI
