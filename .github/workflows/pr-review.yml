@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: SemTiOne/chess-review-bot@v1
+      - uses: SemTiOne/chess-review-bot/action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on-blunder: 'false'

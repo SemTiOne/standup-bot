@@ -78,6 +78,16 @@ def load_config() -> dict:
 
     config = _deep_merge(_DEFAULTS, raw_config)
 
+    from standup.security import get_secret
+
+    keyring_groq_key = get_secret("groq_api_key")
+    if keyring_groq_key:
+        config["provider"]["groq"]["api_key"] = keyring_groq_key
+
+    keyring_webhook = get_secret("slack_webhook_url")
+    if keyring_webhook:
+        config["slack_webhook_url"] = keyring_webhook
+
     env_key = os.environ.get("GROQ_API_KEY", "")
     if env_key:
         config["provider"]["groq"]["api_key"] = env_key
@@ -105,10 +115,31 @@ def load_config() -> dict:
 
 
 def save_config(config: dict) -> None:
-    """Write a config dict to disk and enforce secure file permissions."""
-    from standup.security import enforce_file_permissions
+    """Write a config dict to disk and enforce secure file permissions.
 
-    config_path = Path(CONFIG_PATH)
-    config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
-    enforce_file_permissions(CONFIG_PATH, label="Config file")
+    The Groq API key and Slack webhook URL are stored in the OS
+    keychain when one is available, and scrubbed from the on-disk
+    JSON in that case, so they no longer sit in clear text on disk
+    at all. If no keychain backend is available (headless Linux, CI,
+    Docker), they're written into the JSON file as before, with
+    permissions restricted to the current user from the moment the
+    file is created.
+    """
+    from standup.security import store_secret, write_text_restricted
+
+    on_disk = copy.deepcopy(config)
+
+    groq_key = on_disk.get("provider", {}).get("groq", {}).get("api_key", "")
+    if store_secret("groq_api_key", groq_key):
+        on_disk["provider"]["groq"]["api_key"] = ""
+
+    webhook = on_disk.get("slack_webhook_url", "")
+    if store_secret("slack_webhook_url", webhook):
+        on_disk["slack_webhook_url"] = ""
+
+    write_text_restricted(
+        CONFIG_PATH,
+        json.dumps(on_disk, indent=2),
+        label="Config file",
+    )
     console.print(f"[green]✅ Config saved to {CONFIG_PATH}[/green]")
