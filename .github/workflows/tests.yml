@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint & Format Check
@@ -70,7 +73,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.9 removed: dropped from python_requires in setup.py. 3.10 is the minimum.
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
