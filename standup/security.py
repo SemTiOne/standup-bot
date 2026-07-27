@@ -334,6 +334,12 @@ def write_text_restricted(file_path: str, content: str, label: str = "File") -> 
     content exists), then writes the real content, closing that
     window.
 
+    Security note: content is stored in clear text on disk (CodeQL
+    ``py/clear-text-storage-sensitive-data``). This is intentional,
+    the file is locked to owner-only permissions before any data is
+    written, and the content must remain human-readable for config
+    files. Encryption at rest is out of scope for this function.
+
     Args:
         file_path: Path to write to.
         content: Text content to write.
@@ -345,7 +351,9 @@ def write_text_restricted(file_path: str, content: str, label: str = "File") -> 
     path = Path(file_path)
     path.touch(exist_ok=True)
     enforce_file_permissions(file_path, label=label)
-    path.write_text(content, encoding="utf-8")
+    path.write_text(
+        content, encoding="utf-8"
+    )
 
 
 def enforce_config_permissions(config_path: str) -> None:
