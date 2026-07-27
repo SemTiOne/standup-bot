@@ -4,6 +4,7 @@ security.py - API key masking, redaction, file permissions, and doctor checks.
 
 import importlib
 import json
+import os
 import re
 import sqlite3
 import stat
@@ -191,9 +192,72 @@ def sanitize_error_message(exc: Any) -> str:
         return "An unexpected error occurred."
 
 
+_KEYRING_SERVICE = "standup-bot"
+_KEYRING_WARNED_KEYS: set = set()
+
+
+def store_secret(key_name: str, value: str) -> bool:
+    """
+    Store a secret in the OS keychain (Keychain on macOS, Credential
+    Manager on Windows, Secret Service on Linux) via ``keyring``.
+
+    Returns:
+        True if the secret was stored in the OS keychain. False if no
+        keychain backend is available (common in headless Linux, CI,
+        and Docker environments) or the backend raised any other
+        error; callers should fall back to their own storage in
+        that case rather than lose the value. Warns once per key,
+        not on every call, to avoid spamming a CLI tool's output.
+    """
+    if not value:
+        return False
+    try:
+        import keyring
+
+        keyring.set_password(_KEYRING_SERVICE, key_name, value)
+        return True
+    except Exception:
+        if key_name not in _KEYRING_WARNED_KEYS:
+            _KEYRING_WARNED_KEYS.add(key_name)
+            console.print(
+                f"[yellow]⚠️  No OS keychain available for {key_name}; "
+                "storing it in the config file instead (permissions "
+                "still restricted to your user).[/yellow]"
+            )
+        return False
+
+
+def get_secret(key_name: str) -> str | None:
+    """
+    Retrieve a secret previously stored via ``store_secret``.
+
+    Returns:
+        The stored value, or ``None`` if it isn't in the OS keychain
+        (never stored there, or no backend available); callers
+        should fall back to a config-file value in that case.
+    """
+    try:
+        import keyring
+
+        return keyring.get_password(_KEYRING_SERVICE, key_name)
+    except Exception:
+        return None
+
+
+def delete_secret(key_name: str) -> None:
+    """Best-effort delete of a secret from the OS keychain. Never raises."""
+    try:
+        import keyring
+
+        keyring.delete_password(_KEYRING_SERVICE, key_name)
+    except Exception:  # noqa: S110 – intentionally swallowed; best-effort delete
+        pass
+
+
 def enforce_file_permissions(file_path: str, label: str = "File") -> None:
     """
-    Set a file to chmod 600 on Unix/macOS and warn on Windows.
+    Restrict a file to the current user only: chmod 600 on Unix/macOS,
+    an icacls ACL reset on Windows.
 
     Args:
         file_path: Path to the file.
@@ -209,12 +273,7 @@ def enforce_file_permissions(file_path: str, label: str = "File") -> None:
     if not path.exists():
         return
     if sys.platform == "win32":
-        if file_path not in _PERMISSION_WARNED_PATHS:
-            _PERMISSION_WARNED_PATHS.add(file_path)
-            console.print(
-                f"[yellow]⚠️  Windows detected: cannot enforce file permissions on {label}. "
-                "Ensure only your user can read it.[/yellow]"
-            )
+        _enforce_windows_acl(file_path, label)
         return
     try:
         current = stat.S_IMODE(path.stat().st_mode)
@@ -222,6 +281,71 @@ def enforce_file_permissions(file_path: str, label: str = "File") -> None:
             path.chmod(0o600)
     except OSError:
         return
+
+
+def _enforce_windows_acl(file_path: str, label: str = "File") -> None:
+    """
+    Restrict a file to the current user on Windows using ``icacls``:
+    strip inherited permissions and grant full control to the owner
+    only. Falls back to a one-time warning if ``icacls`` itself is
+    unavailable or fails (e.g. on a filesystem that doesn't support
+    ACLs), rather than silently claiming the file is protected.
+    """
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            [
+                "icacls",
+                file_path,
+                "/inheritance:r",
+                "/grant:r",
+                f"{os.environ.get('USERNAME', '')}:F",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+    if file_path not in _PERMISSION_WARNED_PATHS:
+        _PERMISSION_WARNED_PATHS.add(file_path)
+        console.print(
+            f"[yellow]⚠️  Could not restrict permissions on {label} via icacls. "
+            "Ensure only your user can read it.[/yellow]"
+        )
+
+
+def write_text_restricted(file_path: str, content: str, label: str = "File") -> None:
+    """
+    Write ``content`` to ``file_path`` such that the file never has
+    broader-than-owner-only permissions, including the moment it is
+    first created.
+
+    ``Path.write_text()`` creates the file with the OS's default mode
+    (commonly 644; world-readable) and only becomes owner-only after
+    a subsequent, separate ``enforce_file_permissions()`` call, a
+    window in which sensitive content (API keys, webhook URLs) sits
+    world-readable on disk. This creates the file empty first (with
+    permissions locked down immediately after creation, before any
+    content exists), then writes the real content, closing that
+    window.
+
+    Args:
+        file_path: Path to write to.
+        content: Text content to write.
+        label: Human-friendly file label for warnings.
+
+    Returns:
+        None.
+    """
+    path = Path(file_path)
+    path.touch(exist_ok=True)
+    enforce_file_permissions(file_path, label=label)
+    path.write_text(content, encoding="utf-8")
 
 
 def enforce_config_permissions(config_path: str) -> None:

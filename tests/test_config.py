@@ -189,3 +189,86 @@ def test_load_config_resolves_groq_env_var(tmp_path, monkeypatch):
 
     config = load_config()
     assert config["provider"]["groq"]["api_key"].startswith("gsk_")
+
+
+# ---------------------------------------------------------------------------
+# save_config / load_config -- OS keychain integration
+# ---------------------------------------------------------------------------
+
+
+def _fake_keyring(monkeypatch):
+    """Monkeypatch keyring with an in-memory store, simulating an
+    available OS keychain backend for the duration of a test."""
+    import keyring
+
+    store: dict[tuple[str, str], str] = {}
+    monkeypatch.setattr(
+        keyring,
+        "set_password",
+        lambda service, key, value: store.__setitem__((service, key), value),
+    )
+    monkeypatch.setattr(keyring, "get_password", lambda service, key: store.get((service, key)))
+    monkeypatch.setattr(
+        keyring, "delete_password", lambda service, key: store.pop((service, key), None)
+    )
+    return store
+
+
+def test_save_config_scrubs_secrets_from_disk_when_keychain_available(tmp_path, monkeypatch):
+    _fake_keyring(monkeypatch)
+    cfg_path = tmp_path / ".standup.json"
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+
+    config = _valid_config_dict(tmp_path)
+    config["provider"]["groq"]["api_key"] = "gsk_realsecret"
+    config["slack_webhook_url"] = "https://hooks.slack.com/services/real/webhook/url"
+
+    save_config(config)
+
+    on_disk = json.loads(cfg_path.read_text())
+    assert on_disk["provider"]["groq"]["api_key"] == ""
+    assert on_disk["slack_webhook_url"] == ""
+    assert config["provider"]["groq"]["api_key"] == "gsk_realsecret"
+    assert config["slack_webhook_url"] == "https://hooks.slack.com/services/real/webhook/url"
+
+
+def test_save_config_keeps_secrets_on_disk_without_a_keychain(tmp_path, monkeypatch):
+    cfg_path = tmp_path / ".standup.json"
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+
+    config = _valid_config_dict(tmp_path)
+    config["provider"]["groq"]["api_key"] = "gsk_realsecret"
+
+    save_config(config)
+
+    on_disk = json.loads(cfg_path.read_text())
+    assert on_disk["provider"]["groq"]["api_key"] == "gsk_realsecret"
+
+
+def test_load_config_prefers_keychain_value_over_file(tmp_path, monkeypatch):
+    from standup.config import load_config
+
+    store = _fake_keyring(monkeypatch)
+    store[("standup-bot", "groq_api_key")] = "gsk_fromkeychain"
+
+    cfg_path = tmp_path / ".standup.json"
+    cfg_path.write_text(json.dumps({"provider": {"groq": {"api_key": "gsk_stalefilevalue"}}}))
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+
+    config = load_config()
+    assert config["provider"]["groq"]["api_key"] == "gsk_fromkeychain"
+
+
+def test_load_config_env_var_still_wins_over_keychain(tmp_path, monkeypatch):
+    from standup.config import load_config
+
+    store = _fake_keyring(monkeypatch)
+    store[("standup-bot", "groq_api_key")] = "gsk_fromkeychain"
+
+    cfg_path = tmp_path / ".standup.json"
+    cfg_path.write_text(json.dumps({}))
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_fromenv" + "x" * 30)
+
+    config = load_config()
+    assert config["provider"]["groq"]["api_key"].startswith("gsk_fromenv")
