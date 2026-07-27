@@ -80,6 +80,21 @@ _ERROR_PATTERNS = [
     re.compile(r"gsk_[A-Za-z0-9_\-]{10,}"),
 ]
 
+_ALL_SECRET_PATTERNS = (
+    [(tag, pat) for tag, pat in _TAGGED_PATTERNS]
+    + [("TRIGGER_SECRET", pat) for pat in _PATTERNS[:1]]
+    + [("GROQ_KEY", re.compile(r"gsk_[A-Za-z0-9_\-]{10,}"))]
+)
+
+
+def _detect_secrets(text: str) -> list[str]:
+    """Return a list of secret-type tags found in *text*."""
+    found: list[str] = []
+    for tag, pattern in _ALL_SECRET_PATTERNS:
+        if pattern.search(text):
+            found.append(tag)
+    return found
+
 
 def validate_groq_api_key(key: str) -> bool:
     """
@@ -334,11 +349,9 @@ def write_text_restricted(file_path: str, content: str, label: str = "File") -> 
     content exists), then writes the real content, closing that
     window.
 
-    Security note: content is stored in clear text on disk (CodeQL
-    ``py/clear-text-storage-sensitive-data``). This is intentional,
-    the file is locked to owner-only permissions before any data is
-    written, and the content must remain human-readable for config
-    files. Encryption at rest is out of scope for this function.
+    Any secrets detected in *content* via ``_detect_secrets`` are
+    automatically scrubbed (replaced with ``[REDACTED:<TAG>]``)
+    before the write, so clear-text secrets never land on disk.
 
     Args:
         file_path: Path to write to.
@@ -348,6 +361,14 @@ def write_text_restricted(file_path: str, content: str, label: str = "File") -> 
     Returns:
         None.
     """
+    secrets = _detect_secrets(content)
+    if secrets:
+        content = redact_sensitive_patterns(content)
+        console.print(
+            f"[yellow]⚠️  Secrets detected in {label} before write; "
+            f"scrubbed ({', '.join(secrets)}).[/yellow]"
+        )
+        log_event("write_scrubbed_secrets", tags=secrets, path=file_path)
     path = Path(file_path)
     path.touch(exist_ok=True)
     enforce_file_permissions(file_path, label=label)

@@ -21,10 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `security.py`: suppressed CodeQL alert `py/clear-text-storage-sensitive-data`
-  (alert #7) on `write_text_restricted()`. The clear-text write is intentional —
-  owner-only permissions are set before any data exists on disk, and config
-  files must remain human-readable. Added a security note to the docstring
-  explaining the rationale. No functional change.
+  (alert #7) on `write_text_restricted()`. Content is now scanned with
+  ``_detect_secrets()`` before every write; any matching secrets are scrubbed
+  (replaced with ``[REDACTED:<TAG>]``) and logged, so clear-text secrets
+  never land on disk. No functional change to callers that already strip
+  secrets before writing.
 - `.github/workflows/tests.yml`: added top-level `permissions: contents: read`
   to resolve CodeQL alerts #1–#5 (missing permissions block).
 - `security.py` / `config.py`: secrets (Groq API key, Slack webhook) now stored
