@@ -5,4 +5,4 @@ pyperclip>=1.11.0,<2.0.0
 rich>=15.0.0,<16.0.0
 requests>=2.34.2,<3.0.0
 keyring>=25.7.0,<26.0.0
-cryptography>=41.0.0,<44.0.0
+cryptography>=49.0.0,<50.0.0
