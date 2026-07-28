@@ -133,8 +133,10 @@ def test_warm_up_groq_exception_verbose(monkeypatch):
     provider = GroqProvider(
         {"provider": {"groq": {"api_key": "gsk_" + ("a" * 40), "model": "llama-3.1-8b-instant"}}}
     )
+
     def _boom():
         raise RuntimeError("groq is down")
+
     monkeypatch.setattr(provider, "is_available", _boom)
     assert warm_up_provider(provider, verbose=True) is False
 
@@ -145,8 +147,10 @@ def test_warm_up_generic_verbose_success():
 
 def test_warm_up_generic_exception_verbose(monkeypatch):
     provider = DummyProvider(True)
+
     def _boom():
         raise RuntimeError("generic fail")
+
     monkeypatch.setattr(provider, "is_available", _boom)
     assert warm_up_provider(provider, verbose=True) is False
 
@@ -157,6 +161,7 @@ def test_warm_up_generic_direct_verbose_success(monkeypatch):
 
 def test_warm_up_provider_real_ollama_instance(monkeypatch):
     from standup.llm.ollama_provider import OllamaProvider
+
     provider = object.__new__(OllamaProvider)
     provider.base_url = "http://localhost:11434"
     provider.model = "llama3"

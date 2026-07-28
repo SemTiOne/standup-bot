@@ -135,11 +135,13 @@ def test_extract_json_strengths_not_a_list():
 def test_score_with_ollama_success(monkeypatch):
     import sys
     import types
+
     ollama_mock = types.ModuleType("ollama")
 
     class MockClient:
         def __init__(self, **kwargs):
             pass
+
         def chat(self, **kwargs):
             return {"message": {"content": '{"score": 85, "issues": [], "strengths": ["clear"]}'}}
 
@@ -157,11 +159,13 @@ def test_score_with_ollama_success(monkeypatch):
 def test_score_with_ollama_exception_returns_fallback(monkeypatch):
     import sys
     import types
+
     ollama_mock = types.ModuleType("ollama")
 
     class BrokenClient:
         def __init__(self, **kwargs):
             pass
+
         def chat(self, **kwargs):
             raise RuntimeError("ollama failed")
 
@@ -187,6 +191,7 @@ def test_score_with_groq_no_api_key_returns_fallback(monkeypatch):
 def test_score_with_groq_exception_returns_fallback(monkeypatch):
     import sys
     import types
+
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     groq_mock = types.ModuleType("groq")
 
@@ -207,11 +212,13 @@ def test_score_with_groq_exception_returns_fallback(monkeypatch):
 def test_score_standup_ollama_provider_path(monkeypatch):
     import sys
     import types
+
     ollama_mock = types.ModuleType("ollama")
 
     class MockClient:
         def __init__(self, **kwargs):
             pass
+
         def chat(self, **kwargs):
             return {"message": {"content": '{"score": 92, "issues": [], "strengths": ["great"]}'}}
 
@@ -234,7 +241,11 @@ def test_score_standup_groq_provider_path(monkeypatch):
     groq_mock = types.ModuleType("groq")
     mock_instance = MagicMock()
     mock_instance.chat.completions.create.return_value = MagicMock(
-        choices=[MagicMock(message=MagicMock(content='{"score": 78, "issues": ["vague"], "strengths": []}'))]
+        choices=[
+            MagicMock(
+                message=MagicMock(content='{"score": 78, "issues": ["vague"], "strengths": []}')
+            )
+        ]
     )
     groq_mock.Groq = MagicMock(return_value=mock_instance)
     monkeypatch.setitem(sys.modules, "groq", groq_mock)

@@ -1,9 +1,6 @@
 """Tests for isolated helper functions in standup/main.py."""
 
-import sys
 import types
-from pathlib import Path
-
 from datetime import datetime
 
 from standup.main import (
@@ -17,12 +14,14 @@ from standup.main import (
 
 def test_get_provider_slug_ollama():
     from standup.llm.ollama_provider import OllamaProvider
+
     provider = object.__new__(OllamaProvider)
     assert _get_provider_slug(provider) == "ollama"
 
 
 def test_get_provider_slug_groq():
     from standup.llm.groq_provider import GroqProvider
+
     provider = object.__new__(GroqProvider)
     assert _get_provider_slug(provider) == "groq"
 
@@ -30,6 +29,7 @@ def test_get_provider_slug_groq():
 def test_get_provider_slug_unknown():
     class CustomProvider:
         pass
+
     assert _get_provider_slug(CustomProvider()) == "customprovider"
 
 
@@ -109,6 +109,7 @@ def test_startup_paths_linux(monkeypatch):
 
 def test_show_quality_breakdown_strengths(monkeypatch, capsys):
     from standup.main import _show_quality_breakdown
+
     quality = {"score": 80, "strengths": ["well documented", "good messages"], "issues": []}
     _show_quality_breakdown(quality)
     out = capsys.readouterr().out
@@ -118,6 +119,7 @@ def test_show_quality_breakdown_strengths(monkeypatch, capsys):
 
 def test_show_quality_breakdown_issues(monkeypatch, capsys):
     from standup.main import _show_quality_breakdown
+
     quality = {"issues": ["too long", "missing scope"], "strengths": []}
     _show_quality_breakdown(quality)
     out = capsys.readouterr().out
@@ -127,6 +129,7 @@ def test_show_quality_breakdown_issues(monkeypatch, capsys):
 
 def test_show_quality_breakdown_no_data(capsys):
     from standup.main import _show_quality_breakdown
+
     quality = {"strengths": None, "issues": None}
     _show_quality_breakdown(quality)
     out = capsys.readouterr().out
@@ -135,41 +138,50 @@ def test_show_quality_breakdown_no_data(capsys):
 
 def test_should_auto_warm_up_disabled(monkeypatch):
     from standup.main import _should_auto_warm_up
+
     assert _should_auto_warm_up(object(), {"auto_warm_up": False}) is False
 
 
 def test_should_auto_warm_up_import_error(monkeypatch):
     import builtins
+
     original_import = builtins.__import__
+
     def _fake_import(name, *args, **kwargs):
         if name == "standup.warmup":
             raise ImportError("simulated")
         return original_import(name, *args, **kwargs)
+
     monkeypatch.setattr(builtins, "__import__", _fake_import)
     from standup.main import _should_auto_warm_up
+
     provider = object.__new__(type("Fake", (), {}))
     assert _should_auto_warm_up(provider, {"auto_warm_up": True}) is False
 
 
 def test_should_auto_warm_up_non_ollama():
-    from standup.main import _should_auto_warm_up
     from standup.llm.groq_provider import GroqProvider
+    from standup.main import _should_auto_warm_up
+
     provider = object.__new__(GroqProvider)
     assert _should_auto_warm_up(provider, {"auto_warm_up": True}) is False
 
 
 def test_should_auto_warm_up_already_warm(monkeypatch):
     monkeypatch.setattr("standup.warmup.is_model_warm", lambda p: True)
-    from standup.main import _should_auto_warm_up
     from standup.llm.ollama_provider import OllamaProvider
+    from standup.main import _should_auto_warm_up
+
     provider = object.__new__(OllamaProvider)
     assert _should_auto_warm_up(provider, {"auto_warm_up": True}) is False
 
 
 def test_post_to_slack_success(monkeypatch, capsys):
     from standup.main import _post_to_slack
+
     class FakeResponse:
         status_code = 200
+
     monkeypatch.setattr("requests.post", lambda *a, **kw: FakeResponse())
     _post_to_slack("https://hooks.slack.com/x", "hello")
     out = capsys.readouterr().out
@@ -178,9 +190,11 @@ def test_post_to_slack_success(monkeypatch, capsys):
 
 def test_post_to_slack_http_error(monkeypatch, capsys):
     from standup.main import _post_to_slack
+
     class FakeResponse:
         status_code = 400
         text = "bad request"
+
     monkeypatch.setattr("requests.post", lambda *a, **kw: FakeResponse())
     _post_to_slack("https://hooks.slack.com/x", "hello")
     out = capsys.readouterr().out
@@ -189,8 +203,10 @@ def test_post_to_slack_http_error(monkeypatch, capsys):
 
 def test_post_to_slack_exception(monkeypatch, capsys):
     from standup.main import _post_to_slack
+
     def _raise(*a, **kw):
         raise ConnectionError("network error")
+
     monkeypatch.setattr("requests.post", _raise)
     _post_to_slack("https://hooks.slack.com/x", "hello")
     out = capsys.readouterr().out
@@ -199,6 +215,7 @@ def test_post_to_slack_exception(monkeypatch, capsys):
 
 def test_startup_definition_content_windows(monkeypatch):
     from standup.main import _startup_definition_content
+
     monkeypatch.setattr("standup.main.sys.platform", "win32")
     paths = _startup_paths()
     result = _startup_definition_content(paths, "echo hello")
@@ -209,6 +226,7 @@ def test_startup_definition_content_windows(monkeypatch):
 
 def test_startup_definition_content_darwin(monkeypatch):
     from standup.main import _startup_definition_content
+
     monkeypatch.setattr("standup.main.sys.platform", "darwin")
     paths = _startup_paths()
     result = _startup_definition_content(paths, "echo hello")
@@ -219,6 +237,7 @@ def test_startup_definition_content_darwin(monkeypatch):
 
 def test_startup_definition_content_linux(monkeypatch):
     from standup.main import _startup_definition_content
+
     monkeypatch.setattr("standup.main.sys.platform", "linux")
     paths = _startup_paths()
     result = _startup_definition_content(paths, "echo hello")
@@ -229,32 +248,40 @@ def test_startup_definition_content_linux(monkeypatch):
 
 def test_prompt_keyboard_interrupt(monkeypatch):
     from standup.main import _prompt
+
     def _raise(*a):
         raise KeyboardInterrupt()
+
     monkeypatch.setattr("standup.main.console.input", _raise)
     import pytest
+
     with pytest.raises(SystemExit):
         _prompt("test", "default")
 
 
 def test_prompt_eof_error(monkeypatch):
     from standup.main import _prompt
+
     def _raise(*a):
         raise EOFError()
+
     monkeypatch.setattr("standup.main.console.input", _raise)
     import pytest
+
     with pytest.raises(SystemExit):
         _prompt("test", "")
 
 
 def test_prompt_bool_valid_input(monkeypatch):
     from standup.main import _prompt_bool
+
     monkeypatch.setattr("standup.main._prompt", lambda label, default: "yes")
     assert _prompt_bool("noise_filter_enabled", True) is True
 
 
 def test_prompt_bool_invalid_then_valid(monkeypatch, capsys):
     from standup.main import _prompt_bool
+
     inputs = iter(["invalid", "no"])
     monkeypatch.setattr("standup.main._prompt", lambda label, default: next(inputs))
     assert _prompt_bool("noise_filter_enabled", True) is False
@@ -265,8 +292,9 @@ def test_prompt_bool_invalid_then_valid(monkeypatch, capsys):
 def test_should_auto_warm_up_needs_warmup(monkeypatch):
     monkeypatch.setattr("standup.warmup.is_model_warm", lambda p: False)
     monkeypatch.setattr("standup.history.get_history", lambda **kw: [])
-    from standup.main import _should_auto_warm_up
     from standup.llm.ollama_provider import OllamaProvider
+    from standup.main import _should_auto_warm_up
+
     provider = object.__new__(OllamaProvider)
     assert _should_auto_warm_up(provider, {"auto_warm_up": True}) is True
 
@@ -276,8 +304,9 @@ def test_should_auto_warm_up_with_history_wrong_provider(monkeypatch):
     now = datetime.now()
     entries = [{"provider": "groq", "model": "mixtral", "created_at": now.isoformat()}]
     monkeypatch.setattr("standup.history.get_history", lambda **kw: entries)
-    from standup.main import _should_auto_warm_up
     from standup.llm.ollama_provider import OllamaProvider
+    from standup.main import _should_auto_warm_up
+
     provider = object.__new__(OllamaProvider)
     monkeypatch.setattr("standup.main._get_provider_model", lambda p: "llama3")
     assert _should_auto_warm_up(provider, {"auto_warm_up": True}) is True
@@ -288,8 +317,9 @@ def test_should_auto_warm_up_with_history_wrong_model(monkeypatch):
     now = datetime.now()
     entries = [{"provider": "ollama", "model": "mixtral", "created_at": now.isoformat()}]
     monkeypatch.setattr("standup.history.get_history", lambda **kw: entries)
-    from standup.main import _should_auto_warm_up
     from standup.llm.ollama_provider import OllamaProvider
+    from standup.main import _should_auto_warm_up
+
     provider = object.__new__(OllamaProvider)
     monkeypatch.setattr("standup.main._get_provider_model", lambda p: "llama3")
     assert _should_auto_warm_up(provider, {"auto_warm_up": True}) is True
@@ -299,8 +329,9 @@ def test_should_auto_warm_up_with_history_invalid_date(monkeypatch):
     monkeypatch.setattr("standup.warmup.is_model_warm", lambda p: False)
     entries = [{"provider": "ollama", "model": "llama3", "created_at": "not-a-date"}]
     monkeypatch.setattr("standup.history.get_history", lambda **kw: entries)
-    from standup.main import _should_auto_warm_up
     from standup.llm.ollama_provider import OllamaProvider
+    from standup.main import _should_auto_warm_up
+
     provider = object.__new__(OllamaProvider)
     monkeypatch.setattr("standup.main._get_provider_model", lambda p: "llama3")
     assert _should_auto_warm_up(provider, {"auto_warm_up": True}) is True
@@ -311,8 +342,9 @@ def test_should_auto_warm_up_with_history_recent_entry(monkeypatch):
     now = datetime.now()
     entries = [{"provider": "ollama", "model": "llama3", "created_at": now.isoformat()}]
     monkeypatch.setattr("standup.history.get_history", lambda **kw: entries)
-    from standup.main import _should_auto_warm_up
     from standup.llm.ollama_provider import OllamaProvider
+    from standup.main import _should_auto_warm_up
+
     provider = object.__new__(OllamaProvider)
     monkeypatch.setattr("standup.main._get_provider_model", lambda p: "llama3")
     assert _should_auto_warm_up(provider, {"auto_warm_up": True}) is False
@@ -320,8 +352,11 @@ def test_should_auto_warm_up_with_history_recent_entry(monkeypatch):
 
 def test_render_final_output(monkeypatch):
     from standup.main import _render_final_output
+
     monkeypatch.setattr("standup.templates.get_template", lambda name, custom: "Done: {yesterday}")
-    monkeypatch.setattr("standup.templates.build_template_variables", lambda *a, **kw: {"yesterday": "fixed bugs"})
+    monkeypatch.setattr(
+        "standup.templates.build_template_variables", lambda *a, **kw: {"yesterday": "fixed bugs"}
+    )
     monkeypatch.setattr("standup.templates.render_template", lambda tmpl, vars: "Done: fixed bugs")
     result = _render_final_output("bugs fixed", "default", {}, [{"repo": "app"}], "ollama")
     assert "Done" in result
@@ -329,6 +364,7 @@ def test_render_final_output(monkeypatch):
 
 def test_run_maintenance(monkeypatch, capsys):
     from standup.main import _run_maintenance
+
     monkeypatch.setattr("standup.history.auto_cleanup_if_needed", lambda: None)
     monkeypatch.setattr("standup.rate_limiter.load_usage", lambda: {})
     monkeypatch.setattr("standup.rate_limiter.save_usage", lambda u: None)

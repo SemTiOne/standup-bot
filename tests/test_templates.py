@@ -167,9 +167,11 @@ def test_render_template_empty():
 
 def test_render_template_substitution_exception(monkeypatch):
     import standup.templates as tmpl
+
     class FakePattern:
         def sub(self, repl, string):
             raise RuntimeError("substitution failed")
+
     monkeypatch.setattr(tmpl, "_VARIABLE_TOKEN_RE", FakePattern())
     result = tmpl.render_template("{yesterday}", {"yesterday": "work"})
     assert result == "{yesterday}"

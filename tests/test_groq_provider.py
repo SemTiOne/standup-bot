@@ -1,12 +1,11 @@
 """Tests for standup/llm/groq_provider.py."""
 
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from standup.llm.base import LLMProviderError
-from standup.llm.groq_provider import GROQ_SIGNUP_URL, GroqProvider
+from standup.llm.groq_provider import GroqProvider
 from standup.validator import MAX_LLM_RESPONSE_LENGTH
 
 _CONFIG = {
