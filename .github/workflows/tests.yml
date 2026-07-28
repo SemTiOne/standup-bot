@@ -96,7 +96,7 @@ jobs:
       - name: Run tests with coverage
         run: pytest tests/ -v --tb=short --cov=standup --cov-report=xml --cov-report=term-missing --cov-fail-under=85 --junitxml=junit.xml -o junit_family=legacy
       - name: Upload coverage
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.12' && !cancelled()
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage.xml
