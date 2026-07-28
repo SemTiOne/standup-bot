@@ -90,11 +90,8 @@ jobs:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
-      - name: Upload test results
+      - name: Upload test results to Codecov
         if: matrix.python-version == '3.12' && !cancelled()
-        uses: codecov/codecov-action@v5
+        uses: codecov/test-results-action@v1
         with:
-          files: ./junit.xml
-          report-type: test_results
           token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
