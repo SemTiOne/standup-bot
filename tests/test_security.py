@@ -686,10 +686,10 @@ def test_permission_status_unix_correct_mode(tmp_path, monkeypatch):
     target.write_text("hello")
     original_stat = pathlib.Path.stat
 
-    def fake_stat(self):
+    def fake_stat(self, *args, **kwargs):
         if str(self) == str(target):
             return type("FakeStat", (), {"st_mode": 0o100600})()
-        return original_stat(self)
+        return original_stat(self, *args, **kwargs)
 
     monkeypatch.setattr(pathlib.Path, "stat", fake_stat)
     label, status, detail = _permission_status(str(target), "Test")
@@ -707,10 +707,10 @@ def test_permission_status_unix_wrong_mode(tmp_path, monkeypatch):
     target.write_text("hello")
     original_stat = pathlib.Path.stat
 
-    def fake_stat(self):
+    def fake_stat(self, *args, **kwargs):
         if str(self) == str(target):
             return type("FakeStat", (), {"st_mode": 0o100644})()
-        return original_stat(self)
+        return original_stat(self, *args, **kwargs)
 
     monkeypatch.setattr(pathlib.Path, "stat", fake_stat)
     label, status, detail = _permission_status(str(target), "Test")
@@ -756,10 +756,10 @@ def test_enforce_file_permissions_unix_chmod_sets_600(tmp_path, monkeypatch):
     chmod_called = []
     original_stat = pathlib.Path.stat
 
-    def fake_stat(self):
+    def fake_stat(self, *args, **kwargs):
         if str(self) == str(target):
             return type("FakeStat", (), {"st_mode": 0o100644})()
-        return original_stat(self)
+        return original_stat(self, *args, **kwargs)
 
     monkeypatch.setattr(pathlib.Path, "stat", fake_stat)
 

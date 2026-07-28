@@ -274,7 +274,10 @@ def enforce_file_permissions(file_path: str, label: str = "File") -> None:
         None.
     """
     path = Path(file_path)
-    if not path.exists():
+    try:
+        if not path.exists():
+            return
+    except OSError:
         return
     if sys.platform == "win32":
         _enforce_windows_acl(file_path, label)
@@ -418,7 +421,11 @@ def enforce_config_permissions(config_path: str) -> None:
 
 def _permission_status(file_path: str, label: str) -> tuple[str, str, str]:
     path = Path(file_path)
-    if not path.exists():
+    try:
+        exists = path.exists()
+    except OSError:
+        return label, "❌", "Could not stat file."
+    if not exists:
         return label, "ℹ️", "Not yet created."
     if sys.platform == "win32":
         return label, "⚠️", "Windows: cannot verify permissions automatically."

@@ -193,7 +193,7 @@ def test_enforce_permissions_oserror_returns_none(monkeypatch, tmp_path):
     class FakeStat:
         st_mode = 0o644
 
-    monkeypatch.setattr(Path, "stat", lambda self: FakeStat())
+    monkeypatch.setattr(Path, "stat", lambda self, *a, **kw: FakeStat())
     monkeypatch.setattr(
         Path, "chmod", lambda self, mode: (_ for _ in ()).throw(OSError("chmod failed"))
     )
