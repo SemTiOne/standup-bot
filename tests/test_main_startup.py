@@ -67,17 +67,18 @@ class _DummyProvider:
 
 
 def _make_test_repo(tmp_path):
-    import subprocess
+    import git as git_module
 
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.email", "a@b.com"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
-    (repo / "f.txt").write_text("hi")
-    subprocess.run(["git", "add", "."], cwd=repo, check=True)
-    subprocess.run(["git", "commit", "-q", "-m", "feat: add file"], cwd=repo, check=True)
-    return str(repo)
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    repo = git_module.Repo.init(str(repo_dir))
+    with repo.config_writer() as cw:
+        cw.set_value("user", "email", "a@b.com")
+        cw.set_value("user", "name", "Test")
+    (repo_dir / "f.txt").write_text("hi")
+    repo.index.add(["f.txt"])
+    repo.index.commit("feat: add file")
+    return str(repo_dir)
 
 
 def _base_config(repo_path: str) -> dict:
