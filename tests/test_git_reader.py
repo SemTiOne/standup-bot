@@ -1,5 +1,6 @@
 """Tests for standup/git_reader.py."""
 
+import builtins
 import subprocess
 import sys
 import types
@@ -218,3 +219,93 @@ def test_get_recent_commits_caps_total_count(monkeypatch):
     monkeypatch.setitem(sys.modules, "git", fake_git)
     commits = get_recent_commits("/tmp/repo", hours=24, author_email="")
     assert len(commits) == MAX_COMMITS_PER_RUN
+
+
+def test_get_recent_commits_git_not_installed(monkeypatch):
+    original_import = builtins.__import__
+
+    def _mock_import(name, *args, **kwargs):
+        if name == "git":
+            raise ImportError("No module named git")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _mock_import)
+    monkeypatch.delitem(sys.modules, "git", raising=False)
+
+    commits = get_recent_commits("/tmp/repo", hours=24, author_email="")
+    assert commits == []
+
+
+def test_get_recent_commits_exception_opening_repo(monkeypatch):
+    class _FakeGitError(Exception):
+        pass
+
+    def _raise_exc(*args, **kwargs):
+        raise Exception("permission denied")
+
+    fake_git = types.SimpleNamespace(
+        Repo=_raise_exc,
+        NULL_TREE="NULL",
+        exc=types.SimpleNamespace(
+            InvalidGitRepositoryError=_FakeGitError,
+            NoSuchPathError=_FakeGitError,
+        ),
+    )
+    monkeypatch.setitem(sys.modules, "git", fake_git)
+
+    commits = get_recent_commits("/tmp/repo", hours=24, author_email="")
+    assert commits == []
+
+
+def test_get_recent_commits_exception_in_iter_commits(monkeypatch):
+    class FakeRepo:
+        def iter_commits(self):
+            raise Exception("iter_commits failed")
+
+    fake_git = types.SimpleNamespace(
+        Repo=lambda _path: FakeRepo(),
+        NULL_TREE="NULL",
+        exc=types.SimpleNamespace(
+            InvalidGitRepositoryError=Exception,
+            NoSuchPathError=Exception,
+        ),
+    )
+    monkeypatch.setitem(sys.modules, "git", fake_git)
+
+    commits = get_recent_commits("/tmp/repo", hours=24, author_email="")
+    assert commits == []
+
+
+def test_get_recent_commits_exception_in_diff(monkeypatch):
+    class FakeCommit:
+        hexsha = "abcdef1234567"
+        message = "test commit"
+        author = types.SimpleNamespace(email="dev@example.com")
+        committed_datetime = __import__("datetime").datetime.now(
+            __import__("datetime").timezone.utc
+        )
+        parents = [None]
+        stats = types.SimpleNamespace(total={})
+
+        def diff(self, *_args, **_kwargs):
+            return []
+
+    class FakeRepo:
+        def iter_commits(self):
+            return [FakeCommit()]
+
+    fake_git = types.SimpleNamespace(
+        Repo=lambda _path: FakeRepo(),
+        NULL_TREE="NULL",
+        exc=types.SimpleNamespace(
+            InvalidGitRepositoryError=Exception,
+            NoSuchPathError=Exception,
+        ),
+    )
+    monkeypatch.setitem(sys.modules, "git", fake_git)
+
+    commits = get_recent_commits("/tmp/repo", hours=24, author_email="")
+    assert len(commits) == 1
+    assert commits[0]["files_changed"] == []
+    assert commits[0]["insertions"] == 0
+    assert commits[0]["deletions"] == 0

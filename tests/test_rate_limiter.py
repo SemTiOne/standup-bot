@@ -2,9 +2,12 @@
 
 from datetime import datetime, timedelta
 
+import pytest
+
 from standup.rate_limiter import (
     check_cooldown,
     check_daily_cap,
+    enforce_rate_limit,
     get_usage_report,
     load_usage,
     record_call,
@@ -182,3 +185,54 @@ def test_get_usage_report_shows_7_days(tmp_path, monkeypatch):
     # Should contain 7 date lines
     lines = [ln for ln in report.splitlines() if "202" in ln and "call" in ln]
     assert len(lines) == 7
+
+
+# ---------------------------------------------------------------------------
+# enforce_rate_limit
+# ---------------------------------------------------------------------------
+
+
+def test_enforce_rate_limit_disabled_not_dict():
+    enforce_rate_limit({"rate_limit": "disabled"})
+
+
+def test_enforce_rate_limit_disabled_enabled_false():
+    enforce_rate_limit({"rate_limit": {"enabled": False}})
+
+
+def test_enforce_rate_limit_force_bypass(monkeypatch):
+    monkeypatch.setattr("standup.rate_limiter.console.print", lambda *a, **kw: None)
+    enforce_rate_limit({"rate_limit": {"enabled": True}}, force=True)
+
+
+def test_enforce_rate_limit_cooldown_blocked(monkeypatch):
+    monkeypatch.setattr("standup.rate_limiter.console.print", lambda *a, **kw: None)
+    monkeypatch.setattr("standup.rate_limiter.log_event", lambda *a, **kw: None)
+    from datetime import datetime, timedelta
+    last_call = (datetime.now() - timedelta(minutes=5)).isoformat()
+    monkeypatch.setattr("standup.rate_limiter.load_usage", lambda: {"last_call": last_call, "daily": {}})
+    with pytest.raises(SystemExit) as exc:
+        enforce_rate_limit({"rate_limit": {"enabled": True, "cooldown_minutes": 30, "max_calls_per_day": 10}})
+    assert exc.value.code == 1
+
+
+def test_enforce_rate_limit_daily_cap_blocked(monkeypatch):
+    monkeypatch.setattr("standup.rate_limiter.console.print", lambda *a, **kw: None)
+    monkeypatch.setattr("standup.rate_limiter.log_event", lambda *a, **kw: None)
+    from datetime import datetime, timedelta, date
+    today = date.today().isoformat()
+    two_hours_ago = (datetime.now() - timedelta(hours=2)).isoformat()
+    monkeypatch.setattr("standup.rate_limiter.load_usage", lambda: {"last_call": two_hours_ago, "daily": {today: 10}})
+    with pytest.raises(SystemExit) as exc:
+        enforce_rate_limit({"rate_limit": {"enabled": True, "cooldown_minutes": 30, "max_calls_per_day": 10}})
+    assert exc.value.code == 1
+
+
+def test_enforce_rate_limit_passes(monkeypatch):
+    monkeypatch.setattr("standup.rate_limiter.console.print", lambda *a, **kw: None)
+    monkeypatch.setattr("standup.rate_limiter.log_event", lambda *a, **kw: None)
+    from datetime import datetime, timedelta, date
+    today = date.today().isoformat()
+    two_hours_ago = (datetime.now() - timedelta(hours=2)).isoformat()
+    monkeypatch.setattr("standup.rate_limiter.load_usage", lambda: {"last_call": two_hours_ago, "daily": {today: 3}})
+    enforce_rate_limit({"rate_limit": {"enabled": True, "cooldown_minutes": 30, "max_calls_per_day": 10}})

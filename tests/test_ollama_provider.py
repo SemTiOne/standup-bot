@@ -3,9 +3,11 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from standup.llm.base import LLMProviderError
 from standup.llm.ollama_provider import _OLLAMA_REQUEST_TIMEOUT, OllamaProvider
+from standup.validator import MAX_LLM_RESPONSE_LENGTH
 
 _CONFIG = {
     "provider": {
@@ -86,3 +88,121 @@ def test_generate_standup_model_not_found_raises_friendly_message():
         provider = OllamaProvider(_CONFIG)
         with pytest.raises(LLMProviderError, match="not available locally"):
             provider.generate_standup("write a standup", "casual")
+
+
+def test_generate_standup_ollama_not_installed():
+    with patch("builtins.__import__") as mock_import:
+        mock_import.side_effect = ImportError("No module named 'ollama'")
+        provider = OllamaProvider(_CONFIG)
+        with pytest.raises(LLMProviderError, match="pip install ollama"):
+            provider.generate_standup("write a standup", "casual")
+
+
+def test_generate_standup_formal_tone():
+    mock_client = _make_client_mock(content="formal standup")
+    with patch("ollama.Client", return_value=mock_client):
+        provider = OllamaProvider(_CONFIG)
+        result = provider.generate_standup("write a standup", "formal")
+    assert result == "formal standup"
+
+
+def test_generate_standup_truncates_long_response():
+    long_content = "a" * (MAX_LLM_RESPONSE_LENGTH + 100)
+    mock_client = _make_client_mock(content=long_content)
+    with patch("ollama.Client", return_value=mock_client):
+        provider = OllamaProvider(_CONFIG)
+        result = provider.generate_standup("write a standup", "casual")
+    assert len(result) == MAX_LLM_RESPONSE_LENGTH
+    assert result == "a" * MAX_LLM_RESPONSE_LENGTH
+
+
+def test_generate_standup_generic_error():
+    mock_client = MagicMock()
+    mock_client.chat.side_effect = Exception("something unexpected happened")
+    with patch("ollama.Client", return_value=mock_client):
+        provider = OllamaProvider(_CONFIG)
+        with pytest.raises(LLMProviderError, match="Ollama could not generate a standup right now"):
+            provider.generate_standup("write a standup", "casual")
+
+
+# ---------------------------------------------------------------------------
+# is_available
+# ---------------------------------------------------------------------------
+
+
+def test_is_available_success():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"models": [{"name": "llama3"}, {"name": "llama3:latest"}]}
+    with patch.object(requests, "get", return_value=mock_resp):
+        provider = OllamaProvider(_CONFIG)
+        assert provider.is_available() is True
+
+
+def test_is_available_wrong_status():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 500
+    with patch.object(requests, "get", return_value=mock_resp):
+        provider = OllamaProvider(_CONFIG)
+        assert provider.is_available() is False
+
+
+def test_is_available_model_not_found():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"models": [{"name": "mistral"}, {"name": "codellama"}]}
+    with patch.object(requests, "get", return_value=mock_resp):
+        provider = OllamaProvider(_CONFIG)
+        assert provider.is_available() is False
+
+
+def test_is_available_connection_error():
+    with patch.object(requests, "get", side_effect=ConnectionError("refused")):
+        provider = OllamaProvider(_CONFIG)
+        assert provider.is_available() is False
+
+
+# ---------------------------------------------------------------------------
+# get_provider_name
+# ---------------------------------------------------------------------------
+
+
+def test_get_provider_name():
+    provider = OllamaProvider(_CONFIG)
+    assert provider.get_provider_name() == "Ollama (llama3)"
+
+
+def test_get_provider_name_default_model():
+    provider = OllamaProvider({"provider": {"ollama": {}}})
+    name = provider.get_provider_name()
+    assert name.startswith("Ollama (")
+    assert "llama" in name
+
+
+# ---------------------------------------------------------------------------
+# list_local_models
+# ---------------------------------------------------------------------------
+
+
+def test_list_local_models_success():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"models": [{"name": "llama3"}, {"name": "mistral"}]}
+    with patch.object(requests, "get", return_value=mock_resp):
+        provider = OllamaProvider(_CONFIG)
+        result = provider.list_local_models()
+    assert result == ["llama3", "mistral"]
+
+
+def test_list_local_models_wrong_status():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 500
+    with patch.object(requests, "get", return_value=mock_resp):
+        provider = OllamaProvider(_CONFIG)
+        assert provider.list_local_models() == []
+
+
+def test_list_local_models_connection_error():
+    with patch.object(requests, "get", side_effect=ConnectionError("refused")):
+        provider = OllamaProvider(_CONFIG)
+        assert provider.list_local_models() == []

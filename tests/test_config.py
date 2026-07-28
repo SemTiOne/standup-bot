@@ -282,3 +282,79 @@ def test_load_config_env_var_still_wins_over_keychain(tmp_path, monkeypatch):
 
     config = load_config()
     assert config["provider"]["groq"]["api_key"].startswith("gsk_fromenv")
+
+
+def test_load_config_no_file_uses_defaults(tmp_path, monkeypatch, capsys):
+    from standup.config import load_config
+
+    cfg_path = tmp_path / ".standup.json"
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+
+    config = load_config()
+    assert config["tone"] == "casual"
+    assert config["hours_lookback"] == 24
+    captured = capsys.readouterr()
+    assert "No config found" in captured.out
+
+
+def test_load_config_oserror_exits(tmp_path, monkeypatch):
+    from standup.config import load_config
+
+    cfg_path = tmp_path / ".standup.json"
+    cfg_path.write_text("{}")
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+
+    def _raise_oserror(*args, **kwargs):
+        raise OSError("Permission denied")
+
+    monkeypatch.setattr("standup.security.read_text_restricted", _raise_oserror)
+
+    with pytest.raises(SystemExit):
+        load_config()
+
+
+def test_load_config_webhook_from_keychain(tmp_path, monkeypatch):
+    from standup.config import load_config
+
+    store = _fake_keyring(monkeypatch)
+    store[("standup-bot", "slack_webhook_url")] = "https://hooks.slack.com/services/test/webhook"
+
+    cfg_path = tmp_path / ".standup.json"
+    config_data = _valid_config_dict(tmp_path)
+    config_data["slack_webhook_url"] = ""
+    cfg_path.write_text(json.dumps(config_data))
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+
+    config = load_config()
+    assert config["slack_webhook_url"] == "https://hooks.slack.com/services/test/webhook"
+
+
+def test_load_config_validation_failure_exits(tmp_path, monkeypatch, capsys):
+    from standup.config import load_config
+
+    cfg_path = tmp_path / ".standup.json"
+    cfg_path.write_text(json.dumps({"tone": "invalid_tone"}))
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+
+    with pytest.raises(SystemExit):
+        load_config()
+
+    captured = capsys.readouterr()
+    assert "Config validation failed" in captured.out
+
+
+def test_load_config_skips_invalid_repo(tmp_path, monkeypatch, capsys):
+    from standup.config import load_config
+
+    cfg_path = tmp_path / ".standup.json"
+    non_git_path = tmp_path / "not_a_repo"
+    non_git_path.mkdir()
+    config_data = _valid_config_dict(tmp_path)
+    config_data["repos"] = [str(non_git_path)]
+    cfg_path.write_text(json.dumps(config_data))
+    monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
+
+    config = load_config()
+    assert config["repos"] == []
+    captured = capsys.readouterr()
+    assert "Skipping invalid repo" in captured.out

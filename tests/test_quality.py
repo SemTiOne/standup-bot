@@ -2,6 +2,8 @@
 
 from standup.quality import (
     _extract_json,
+    _score_with_groq,
+    _score_with_ollama,
     format_score_badge,
     generate_with_quality_retry,
     score_standup,
@@ -93,3 +95,176 @@ def test_generate_with_quality_retry_stops_after_max_retries(monkeypatch):
     result = generate_with_quality_retry("prompt", provider, "casual", 80)
     assert result["retries"] == 2
     assert result["standup_text"] == "three"
+
+
+def test_extract_json_score_below_zero_clamps():
+    payload = _extract_json('{"score": -10, "issues": [], "strengths": []}')
+    assert payload["score"] == 0
+
+
+def test_extract_json_score_above_100_clamps():
+    payload = _extract_json('{"score": 150, "issues": [], "strengths": []}')
+    assert payload["score"] == 100
+
+
+def test_extract_json_score_none_returns_zero():
+    payload = _extract_json('{"score": null, "issues": [], "strengths": []}')
+    assert payload["score"] == 0
+
+
+def test_extract_json_score_bad_string_returns_zero():
+    payload = _extract_json('{"score": "bad", "issues": [], "strengths": []}')
+    assert payload["score"] == 0
+
+
+def test_extract_json_json_decode_error_after_match():
+    payload = _extract_json("{invalid}")
+    assert payload == {"score": 0, "issues": [], "strengths": []}
+
+
+def test_extract_json_issues_not_a_list():
+    payload = _extract_json('{"score": 80, "issues": "single issue", "strengths": []}')
+    assert payload["issues"] == []
+
+
+def test_extract_json_strengths_not_a_list():
+    payload = _extract_json('{"score": 80, "issues": [], "strengths": {"key": "val"}}')
+    assert payload["strengths"] == []
+
+
+def test_score_with_ollama_success(monkeypatch):
+    import sys
+    import types
+    ollama_mock = types.ModuleType("ollama")
+
+    class MockClient:
+        def __init__(self, **kwargs):
+            pass
+        def chat(self, **kwargs):
+            return {"message": {"content": '{"score": 85, "issues": [], "strengths": ["clear"]}'}}
+
+    ollama_mock.Client = MockClient
+    monkeypatch.setitem(sys.modules, "ollama", ollama_mock)
+
+    from standup.llm.ollama_provider import OllamaProvider
+
+    provider = OllamaProvider({"provider": {"ollama": {}}})
+    result = _score_with_ollama("test standup", provider)
+    assert result["score"] == 85
+    assert result["strengths"] == ["clear"]
+
+
+def test_score_with_ollama_exception_returns_fallback(monkeypatch):
+    import sys
+    import types
+    ollama_mock = types.ModuleType("ollama")
+
+    class BrokenClient:
+        def __init__(self, **kwargs):
+            pass
+        def chat(self, **kwargs):
+            raise RuntimeError("ollama failed")
+
+    ollama_mock.Client = BrokenClient
+    monkeypatch.setitem(sys.modules, "ollama", ollama_mock)
+
+    from standup.llm.ollama_provider import OllamaProvider
+
+    provider = OllamaProvider({"provider": {"ollama": {}}})
+    result = _score_with_ollama("test standup", provider)
+    assert result == {"score": 0, "issues": [], "strengths": []}
+
+
+def test_score_with_groq_no_api_key_returns_fallback(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    from standup.llm.groq_provider import GroqProvider
+
+    provider = GroqProvider({"provider": {"groq": {}}})
+    result = _score_with_groq("test standup", provider)
+    assert result == {"score": 0, "issues": [], "strengths": []}
+
+
+def test_score_with_groq_exception_returns_fallback(monkeypatch):
+    import sys
+    import types
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    groq_mock = types.ModuleType("groq")
+
+    class BrokenGroq:
+        def __init__(self, **kwargs):
+            raise RuntimeError("groq unavailable")
+
+    groq_mock.Groq = BrokenGroq
+    monkeypatch.setitem(sys.modules, "groq", groq_mock)
+
+    from standup.llm.groq_provider import GroqProvider
+
+    provider = GroqProvider({"provider": {"groq": {"api_key": "test-key"}}})
+    result = _score_with_groq("test standup", provider)
+    assert result == {"score": 0, "issues": [], "strengths": []}
+
+
+def test_score_standup_ollama_provider_path(monkeypatch):
+    import sys
+    import types
+    ollama_mock = types.ModuleType("ollama")
+
+    class MockClient:
+        def __init__(self, **kwargs):
+            pass
+        def chat(self, **kwargs):
+            return {"message": {"content": '{"score": 92, "issues": [], "strengths": ["great"]}'}}
+
+    ollama_mock.Client = MockClient
+    monkeypatch.setitem(sys.modules, "ollama", ollama_mock)
+
+    from standup.llm.ollama_provider import OllamaProvider
+
+    provider = OllamaProvider({"provider": {"ollama": {}}})
+    result = score_standup("test standup", provider)
+    assert result["score"] == 92
+
+
+def test_score_standup_groq_provider_path(monkeypatch):
+    import sys
+    import types
+    from unittest.mock import MagicMock
+
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    groq_mock = types.ModuleType("groq")
+    mock_instance = MagicMock()
+    mock_instance.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content='{"score": 78, "issues": ["vague"], "strengths": []}'))]
+    )
+    groq_mock.Groq = MagicMock(return_value=mock_instance)
+    monkeypatch.setitem(sys.modules, "groq", groq_mock)
+
+    from standup.llm.groq_provider import GroqProvider
+
+    provider = GroqProvider({"provider": {"groq": {"api_key": "test-key"}}})
+    result = score_standup("test standup", provider)
+    assert result["score"] == 78
+
+
+def test_generate_with_quality_retry_empty_issues_uses_fallback_guidance(monkeypatch):
+    provider = FakeProvider(["draft one", "draft two"])
+    scores = [
+        {"score": 30, "issues": [], "strengths": []},
+        {"score": 85, "issues": [], "strengths": ["better"]},
+    ]
+    monkeypatch.setattr("standup.quality.score_standup", lambda text, provider_obj: scores.pop(0))
+    result = generate_with_quality_retry("prompt", provider, "casual", 80)
+    assert result["standup_text"] == "draft two"
+    assert result["retries"] == 1
+
+
+def test_generate_with_quality_retry_non_list_issues_uses_fallback_guidance(monkeypatch):
+    provider = FakeProvider(["draft one", "draft two"])
+    scores = [
+        {"score": 30, "issues": "not a list", "strengths": []},
+        {"score": 85, "issues": [], "strengths": ["better"]},
+    ]
+    monkeypatch.setattr("standup.quality.score_standup", lambda text, provider_obj: scores.pop(0))
+    result = generate_with_quality_retry("prompt", provider, "casual", 80)
+    assert result["standup_text"] == "draft two"
+    assert result["retries"] == 1

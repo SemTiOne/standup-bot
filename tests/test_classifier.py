@@ -74,3 +74,23 @@ def test_summarize_by_type_counts_types():
     summary = summarize_by_type(commits)
     assert summary["feat"] == 2
     assert summary["fix"] == 1
+
+
+def test_classify_commit_empty_message_returns_unknown():
+    assert classify_commit("") == "unknown"
+
+
+def test_classify_commit_none_message_returns_unknown():
+    assert classify_commit(None) == "unknown"
+
+
+def test_is_noise_empty_message_returns_true():
+    assert is_noise("") is True
+
+
+def test_is_noise_none_message_returns_true():
+    assert is_noise(None) is True
+
+
+def test_is_noise_whitespace_message_returns_true():
+    assert is_noise("   ") is True

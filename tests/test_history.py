@@ -281,3 +281,195 @@ def test_history_source_contains_no_fstring_sql():
     source = Path("standup/history.py").read_text(encoding="utf-8")
     assert 'f"""' not in source
     assert "f'SELECT" not in source
+
+
+def test_sanitize_for_storage_non_string():
+    result = history_module._sanitize_for_storage(12345)
+    assert isinstance(result, str)
+
+
+def test_row_to_entry_invalid_json_repos(tmp_path, monkeypatch):
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+    with history_module._get_connection(str(db_path)) as conn:
+        conn.execute(
+            "INSERT INTO standups "
+            "(created_at, commit_hash, provider, model, tone, "
+            " standup_text, repos, hours_lookback, quality_score) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "2026-01-01T00:00:00",
+                "abc",
+                "ollama",
+                "llama3",
+                "casual",
+                "text",
+                "not valid json",
+                24,
+                0,
+            ),
+        )
+        row = conn.execute("SELECT * FROM standups WHERE commit_hash = ?", ("abc",)).fetchone()
+    entry = history_module._row_to_entry(row)
+    assert entry["repos"] == []
+
+
+def test_get_current_schema_version_no_table(tmp_path, monkeypatch):
+    _patch_db(monkeypatch, tmp_path)
+    conn = sqlite3.connect(str(tmp_path / ".standup_history.db"))
+    conn.row_factory = sqlite3.Row
+    version = history_module.get_current_schema_version(conn)
+    assert version == 0
+    conn.close()
+
+
+def test_init_db_sqlite_error(tmp_path, monkeypatch, capsys):
+    db_path = _patch_db(monkeypatch, tmp_path)
+
+    def _mock_connection(*args, **kwargs):
+        raise sqlite3.Error("mock error")
+
+    monkeypatch.setattr(history_module, "_get_connection", _mock_connection)
+    history_module.init_db()
+
+    captured = capsys.readouterr()
+    assert "Could not initialize history database" in captured.out
+    assert not db_path.exists()
+
+
+def test_find_cached_standup_entry_sqlite_error(tmp_path, monkeypatch, capsys):
+    _patch_db(monkeypatch, tmp_path)
+
+    def _mock_connection(*args, **kwargs):
+        raise sqlite3.Error("mock error")
+
+    monkeypatch.setattr(history_module, "_get_connection", _mock_connection)
+
+    result = history_module.find_cached_standup_entry("abc", "casual", "ollama")
+    assert result is None
+    captured = capsys.readouterr()
+    assert "Could not read standup history" in captured.out
+
+
+def test_enforce_max_rows_sqlite_error(tmp_path, monkeypatch):
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+
+    monkeypatch.setattr(history_module, "get_row_count", lambda _path: 999)
+
+    def _mock_connection(*args, **kwargs):
+        raise sqlite3.Error("mock error")
+
+    monkeypatch.setattr(history_module, "_get_connection", _mock_connection)
+
+    result = history_module._enforce_max_rows(str(db_path))
+    assert result is None
+
+
+def test_save_standup_error(tmp_path, monkeypatch, capsys):
+    _patch_db(monkeypatch, tmp_path)
+
+    def _mock_connection(*args, **kwargs):
+        raise sqlite3.Error("mock error")
+
+    monkeypatch.setattr(history_module, "_get_connection", _mock_connection)
+
+    history_module.save_standup("abc", "ollama", "llama3", "casual", "text", ["app"], 24)
+    captured = capsys.readouterr()
+    assert "Could not save standup history" in captured.out
+
+
+def test_get_history_error(tmp_path, monkeypatch, capsys):
+    _patch_db(monkeypatch, tmp_path)
+
+    def _mock_connection(*args, **kwargs):
+        raise sqlite3.Error("mock error")
+
+    monkeypatch.setattr(history_module, "_get_connection", _mock_connection)
+
+    result = history_module.get_history()
+    assert result == []
+    captured = capsys.readouterr()
+    assert "Could not fetch standup history" in captured.out
+
+
+def test_clear_history_error(tmp_path, monkeypatch, capsys):
+    _patch_db(monkeypatch, tmp_path)
+
+    def _mock_connection(*args, **kwargs):
+        raise sqlite3.Error("mock error")
+
+    monkeypatch.setattr(history_module, "_get_connection", _mock_connection)
+
+    result = history_module.clear_history()
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "Could not clear standup history" in captured.out
+
+
+def test_get_row_count_missing_file(tmp_path, monkeypatch):
+    _patch_db(monkeypatch, tmp_path)
+    result = history_module.get_row_count(str(tmp_path / "nonexistent.db"))
+    assert result == 0
+
+
+def test_get_row_count_sqlite_error(tmp_path, monkeypatch):
+    db_path = _patch_db(monkeypatch, tmp_path)
+    db_path.write_text("not a valid sqlite database")
+    result = history_module.get_row_count(str(db_path))
+    assert result == 0
+
+
+def test_get_current_schema_version_fetchone_returns_none(tmp_path, monkeypatch):
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+    with history_module._get_connection(str(db_path)) as conn:
+        conn.execute("DELETE FROM schema_versions")
+
+    class _FakeCursor:
+        def __init__(self, real_cursor):
+            self._real = real_cursor
+            self._count = 0
+
+        def fetchone(self):
+            self._count += 1
+            if self._count == 1:
+                return None
+            return self._real.fetchone()
+
+    class _FakeConn:
+        def __init__(self, real_conn):
+            self._real = real_conn
+
+        def execute(self, sql, *args):
+            real_cursor = self._real.execute(sql, *args)
+            return _FakeCursor(real_cursor)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            pass
+
+    with history_module._get_connection(str(db_path)) as conn:
+        fake_conn = _FakeConn(conn)
+        monkeypatch.setattr(history_module, "_get_connection", lambda _: fake_conn)
+        assert history_module.get_current_schema_version(conn) == 0
+
+
+def test_get_row_count_fetchone_returns_none(tmp_path, monkeypatch):
+    db_path = _patch_db(monkeypatch, tmp_path)
+    history_module.init_db()
+
+    class _FakeConn:
+        def execute(self, sql, *args):
+            return type("FakeCursor", (), {"fetchone": lambda self: None})()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            pass
+
+    monkeypatch.setattr(history_module, "_get_connection", lambda _: _FakeConn())
+    assert history_module.get_row_count(str(db_path)) == 0

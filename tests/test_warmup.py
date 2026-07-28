@@ -2,6 +2,7 @@
 
 from standup.llm.groq_provider import GroqProvider
 from standup.warmup import (
+    _warm_up_generic,
     get_warm_up_script_content,
     is_model_warm,
     warm_up_ollama,
@@ -21,6 +22,9 @@ class DummyResponse:
 class DummyOllamaProvider:
     base_url = "http://localhost:11434"
     model = "llama3"
+
+    def is_available(self):
+        return True
 
 
 class DummyProvider:
@@ -106,3 +110,55 @@ def test_warm_up_provider_groq_path(monkeypatch):
 
 def test_warm_up_provider_generic_fallback(monkeypatch):
     assert warm_up_provider(DummyProvider(True), verbose=False) is True
+
+
+def test_warm_up_provider_ollama_like_provider():
+    assert warm_up_provider(DummyOllamaProvider(), verbose=False) is True
+
+
+def test_warm_up_ollama_verbose_failure_status(monkeypatch):
+    monkeypatch.setattr("standup.warmup.requests.post", lambda *args, **kwargs: DummyResponse(500))
+    assert warm_up_ollama(DummyOllamaProvider(), verbose=True) is False
+
+
+def test_warm_up_groq_not_available_verbose(monkeypatch):
+    provider = GroqProvider(
+        {"provider": {"groq": {"api_key": "gsk_" + ("a" * 40), "model": "llama-3.1-8b-instant"}}}
+    )
+    monkeypatch.setattr(provider, "is_available", lambda: False)
+    assert warm_up_provider(provider, verbose=True) is False
+
+
+def test_warm_up_groq_exception_verbose(monkeypatch):
+    provider = GroqProvider(
+        {"provider": {"groq": {"api_key": "gsk_" + ("a" * 40), "model": "llama-3.1-8b-instant"}}}
+    )
+    def _boom():
+        raise RuntimeError("groq is down")
+    monkeypatch.setattr(provider, "is_available", _boom)
+    assert warm_up_provider(provider, verbose=True) is False
+
+
+def test_warm_up_generic_verbose_success():
+    assert warm_up_provider(DummyProvider(True), verbose=True) is True
+
+
+def test_warm_up_generic_exception_verbose(monkeypatch):
+    provider = DummyProvider(True)
+    def _boom():
+        raise RuntimeError("generic fail")
+    monkeypatch.setattr(provider, "is_available", _boom)
+    assert warm_up_provider(provider, verbose=True) is False
+
+
+def test_warm_up_generic_direct_verbose_success(monkeypatch):
+    assert _warm_up_generic(DummyProvider(True), verbose=True) is True
+
+
+def test_warm_up_provider_real_ollama_instance(monkeypatch):
+    from standup.llm.ollama_provider import OllamaProvider
+    provider = object.__new__(OllamaProvider)
+    provider.base_url = "http://localhost:11434"
+    provider.model = "llama3"
+    monkeypatch.setattr("standup.warmup.requests.post", lambda *args, **kwargs: DummyResponse(200))
+    assert warm_up_provider(provider, verbose=False) is True

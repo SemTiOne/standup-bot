@@ -137,3 +137,39 @@ def test_validate_custom_template_rejects_attribute_access():
 def test_validate_custom_template_rejects_disallowed_only_variables():
     ok, _ = validate_custom_template("Done: {mystery}")
     assert not ok
+
+
+def test_get_template_invalid_custom_raises_key_error():
+    with pytest.raises(KeyError):
+        get_template("bad", {"bad": "{yesterday!r}"})
+
+
+def test_parse_llm_output_empty_text():
+    result = parse_llm_output("")
+    assert result["yesterday"] == ""
+    assert result["today"] == ""
+    assert result["blockers"] == "None"
+
+
+def test_parse_llm_output_fallback_when_no_sections_match():
+    result = parse_llm_output("Just a random paragraph with no section headers.")
+    assert result["yesterday"] == "Just a random paragraph with no section headers."
+
+
+def test_parse_llm_output_fallback_all_stars():
+    result = parse_llm_output("***")
+    assert result["yesterday"] == ""
+
+
+def test_render_template_empty():
+    assert render_template("", {}) == ""
+
+
+def test_render_template_substitution_exception(monkeypatch):
+    import standup.templates as tmpl
+    class FakePattern:
+        def sub(self, repl, string):
+            raise RuntimeError("substitution failed")
+    monkeypatch.setattr(tmpl, "_VARIABLE_TOKEN_RE", FakePattern())
+    result = tmpl.render_template("{yesterday}", {"yesterday": "work"})
+    assert result == "{yesterday}"
