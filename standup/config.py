@@ -58,7 +58,7 @@ def load_config() -> dict:
 
     if not config_path.exists():
         console.print(
-            f"[yellow]⚠️  No config found at {CONFIG_PATH}. Using defaults. Run: standup --setup[/yellow]"
+            f"[yellow][!]  No config found at {CONFIG_PATH}. Using defaults. Run: standup --setup[/yellow]"
         )
         raw_config: dict[str, Any] = {}
     else:
@@ -67,12 +67,12 @@ def load_config() -> dict:
             raw_config = json.loads(read_text_restricted(CONFIG_PATH, label="Config file"))
         except json.JSONDecodeError as exc:
             console.print(
-                f"[red]❌ Invalid JSON in {CONFIG_PATH}: {sanitize_error_message(exc)}[/red]"
+                f"[red][x] Invalid JSON in {CONFIG_PATH}: {sanitize_error_message(exc)}[/red]"
             )
             sys.exit(1)
         except OSError as exc:
             console.print(
-                f"[red]❌ Could not read {CONFIG_PATH}: {sanitize_error_message(exc)}[/red]"
+                f"[red][x] Could not read {CONFIG_PATH}: {sanitize_error_message(exc)}[/red]"
             )
             sys.exit(1)
 
@@ -95,7 +95,7 @@ def load_config() -> dict:
     ok, errors = validate_full_config(config)
     if not ok:
         log_event("config_validation_failed", error_count=len(errors))
-        console.print("[red]❌ Config validation failed:[/red]")
+        console.print("[red][x] Config validation failed:[/red]")
         for error in errors:
             console.print(f"  [red]• {error}[/red]")
         console.print(f"\nFix your config at: {CONFIG_PATH}")
@@ -108,7 +108,7 @@ def load_config() -> dict:
         if repo_ok:
             valid_repos.append(repo)
         else:
-            console.print(f"[yellow]⚠️  Skipping invalid repo: {message}[/yellow]")
+            console.print(f"[yellow][!]  Skipping invalid repo: {message}[/yellow]")
     config["repos"] = valid_repos
 
     return config
@@ -142,4 +142,4 @@ def save_config(config: dict) -> None:
         json.dumps(on_disk, indent=2),
         label="Config file",
     )
-    console.print(f"[green]✅ Config saved to {CONFIG_PATH}[/green]")
+    console.print(f"[green][+] Config saved to {CONFIG_PATH}[/green]")

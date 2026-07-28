@@ -42,7 +42,7 @@ def _prompt_bool(field_name: str, default: bool) -> bool:
         ok, message = validate_setup_input(field_name, raw_value)
         if ok:
             return parse_bool_text(raw_value)
-        console.print(f"[red]❌ {message}[/red]")
+        console.print(f"[red][x] {message}[/red]")
 
 
 def _post_to_slack(webhook_url: str, text: str) -> None:
@@ -51,13 +51,13 @@ def _post_to_slack(webhook_url: str, text: str) -> None:
     try:
         response = requests.post(webhook_url, json={"text": text}, timeout=10)
         if response.status_code == 200:
-            console.print("[green]✅ Posted to Slack![/green]")
+            console.print("[green][+] Posted to Slack![/green]")
         else:
             console.print(
-                f"[red]❌ Slack post failed: {response.status_code} {response.text}[/red]"
+                f"[red][x] Slack post failed: {response.status_code} {response.text}[/red]"
             )
     except Exception as exc:
-        console.print(f"[red]❌ Slack post error: {sanitize_error_message(exc)}[/red]")
+        console.print(f"[red][x] Slack post error: {sanitize_error_message(exc)}[/red]")
 
 
 def _get_provider_slug(provider: object) -> str:
@@ -302,10 +302,10 @@ def _install_startup(config: dict) -> None:
             subprocess.run(
                 ["systemctl", "--user", "enable", "--now", "standupbot-warmup.service"], check=True
             )
-        console.print("[green]✅ Startup warm-up installed.[/green]")
+        console.print("[green][+] Startup warm-up installed.[/green]")
     except Exception as exc:
         console.print(
-            f"[yellow]⚠️  Startup files were written, but automatic registration failed: {sanitize_error_message(exc)}[/yellow]"
+            f"[yellow][!]  Startup files were written, but automatic registration failed: {sanitize_error_message(exc)}[/yellow]"
         )
 
 
@@ -360,7 +360,7 @@ def _uninstall_startup() -> None:
         artifact = paths.get(key)
         if artifact and artifact.exists():
             artifact.unlink()
-    console.print("[green]✅ Startup warm-up files removed.[/green]")
+    console.print("[green][+] Startup warm-up files removed.[/green]")
 
 
 def run_setup_wizard() -> None:
@@ -401,7 +401,7 @@ def run_setup_wizard() -> None:
         choice = _prompt("Enter choice", "1")
         if choice in ("1", "2"):
             break
-        console.print("[red]❌ Invalid choice. Enter 1 or 2.[/red]")
+        console.print("[red][x] Invalid choice. Enter 1 or 2.[/red]")
 
     if choice == "2":
         config["provider"]["name"] = "groq"
@@ -415,17 +415,17 @@ def run_setup_wizard() -> None:
             if ok:
                 config["provider"]["groq"]["model"] = model_choice
                 break
-            console.print(f"[red]❌ {message}[/red]")
+            console.print(f"[red][x] {message}[/red]")
 
         api_key = _prompt("Groq API key (leave blank to use env var)", "")
         ok, message = validate_setup_input("groq_api_key", api_key)
         if ok and api_key:
             console.print(
-                "[yellow]⚠️  Storing API key in config file. Consider using GROQ_API_KEY env var instead.[/yellow]"
+                "[yellow][!]  Storing API key in config file. Consider using GROQ_API_KEY env var instead.[/yellow]"
             )
             config["provider"]["groq"]["api_key"] = api_key
         elif not ok:
-            console.print(f"[yellow]⚠️  {message} Leaving API key blank.[/yellow]")
+            console.print(f"[yellow][!]  {message} Leaving API key blank.[/yellow]")
     else:
         config["provider"]["name"] = "ollama"
         while True:
@@ -434,7 +434,7 @@ def run_setup_wizard() -> None:
             if ok:
                 config["provider"]["ollama"]["base_url"] = base_url
                 break
-            console.print(f"[red]❌ {message}[/red]")
+            console.print(f"[red][x] {message}[/red]")
 
         while True:
             model = _prompt("Ollama model", "llama3")
@@ -442,17 +442,17 @@ def run_setup_wizard() -> None:
             if ok:
                 config["provider"]["ollama"]["model"] = model
                 break
-            console.print(f"[red]❌ {message}[/red]")
+            console.print(f"[red][x] {message}[/red]")
 
         from standup.llm.ollama_provider import OllamaProvider
 
         provider = OllamaProvider(config)
         if provider.is_available():
-            console.print("[green]✅ Ollama is running and the model is available.[/green]")
+            console.print("[green][+] Ollama is running and the model is available.[/green]")
         else:
             model_name = config["provider"]["ollama"]["model"]
             console.print(
-                f"[yellow]⚠️  Ollama not detected. Install from https://ollama.com, "
+                f"[yellow][!]  Ollama not detected. Install from https://ollama.com, "
                 f"then run: ollama pull {model_name}[/yellow]"
             )
 
@@ -466,9 +466,9 @@ def run_setup_wizard() -> None:
         ok, message = validate_setup_input("repo_path", repo_path)
         if ok:
             repos.append(repo_path)
-            console.print(f"  [green]✅ Added: {repo_path}[/green]")
+            console.print(f"  [green][+] Added: {repo_path}[/green]")
         else:
-            console.print(f"  [red]❌ {message}[/red]")
+            console.print(f"  [red][x] {message}[/red]")
     config["repos"] = repos
 
     while True:
@@ -477,7 +477,7 @@ def run_setup_wizard() -> None:
         if ok:
             config["author_email"] = email
             break
-        console.print(f"[red]❌ {message}[/red]")
+        console.print(f"[red][x] {message}[/red]")
 
     while True:
         hours = _prompt("Hours to look back", "24")
@@ -485,7 +485,7 @@ def run_setup_wizard() -> None:
         if ok:
             config["hours_lookback"] = int(hours)
             break
-        console.print(f"[red]❌ {message}[/red]")
+        console.print(f"[red][x] {message}[/red]")
 
     while True:
         tone = _prompt("Tone (casual/formal)", "casual")
@@ -493,14 +493,14 @@ def run_setup_wizard() -> None:
         if ok:
             config["tone"] = tone.lower().strip()
             break
-        console.print(f"[red]❌ {message}[/red]")
+        console.print(f"[red][x] {message}[/red]")
 
     webhook = sanitize_string(_prompt("Slack webhook URL (optional)", ""))
     ok, message = validate_setup_input("slack_webhook_url", webhook)
     if ok:
         config["slack_webhook_url"] = webhook
     else:
-        console.print(f"[yellow]⚠️  {message} Leaving Slack webhook blank.[/yellow]")
+        console.print(f"[yellow][!]  {message} Leaving Slack webhook blank.[/yellow]")
 
     while True:
         cooldown = _prompt("Cooldown minutes between calls", "30")
@@ -508,7 +508,7 @@ def run_setup_wizard() -> None:
         if ok:
             config["rate_limit"]["cooldown_minutes"] = int(cooldown)
             break
-        console.print(f"[red]❌ {message}[/red]")
+        console.print(f"[red][x] {message}[/red]")
 
     while True:
         max_calls = _prompt("Max calls per day", "10")
@@ -516,7 +516,7 @@ def run_setup_wizard() -> None:
         if ok:
             config["rate_limit"]["max_calls_per_day"] = int(max_calls)
             break
-        console.print(f"[red]❌ {message}[/red]")
+        console.print(f"[red][x] {message}[/red]")
 
     while True:
         template_name = _prompt("Template (default/slack/minimal/detailed/jira)", "default")
@@ -524,7 +524,7 @@ def run_setup_wizard() -> None:
         if ok:
             config["template"] = template_name
             break
-        console.print(f"[red]❌ {message}[/red]")
+        console.print(f"[red][x] {message}[/red]")
 
     config["noise_filter_enabled"] = _prompt_bool("noise_filter_enabled", True)
     config["quality"]["enabled"] = _prompt_bool("quality_enabled", True)
@@ -535,7 +535,7 @@ def run_setup_wizard() -> None:
         if ok:
             config["quality"]["min_score"] = int(min_score)
             break
-        console.print(f"[red]❌ {message}[/red]")
+        console.print(f"[red][x] {message}[/red]")
 
     config["quality"]["show_breakdown"] = _prompt_bool("quality_show_breakdown", False)
     config["auto_warm_up"] = _prompt_bool("auto_warm_up", False)
@@ -650,7 +650,7 @@ def main() -> None:  # noqa: C901
     errors = validate_cli_args(args, config)
     if errors:
         for error in errors:
-            console.print(f"[red]❌ {error}[/red]")
+            console.print(f"[red][x] {error}[/red]")
         sys.exit(1)
 
     if args.command == "doctor":
@@ -671,9 +671,9 @@ def main() -> None:  # noqa: C901
                 console.print("[yellow]Log clear cancelled.[/yellow]")
                 return
             if clear_logs():
-                console.print("[green]✅ Log file cleared.[/green]")
+                console.print("[green][+] Log file cleared.[/green]")
             else:
-                console.print("[yellow]⚠️  Could not clear log file.[/yellow]")
+                console.print("[yellow][!]  Could not clear log file.[/yellow]")
             return
 
         entries = read_log_entries(args.tail)
@@ -739,7 +739,7 @@ def main() -> None:  # noqa: C901
                 return
             deleted = clear_history(args.days)
             noun = "entry" if deleted == 1 else "entries"
-            console.print(f"[green]✅ Deleted {deleted} history {noun}.[/green]")
+            console.print(f"[green][+] Deleted {deleted} history {noun}.[/green]")
             return
 
         entries = get_history(args.limit)
@@ -805,7 +805,7 @@ def main() -> None:  # noqa: C901
 
     repos = config.get("repos", [])
     if not repos:
-        console.print("[yellow]⚠️  No repos configured. Run: standup --setup[/yellow]")
+        console.print("[yellow][!]  No repos configured. Run: standup --setup[/yellow]")
         sys.exit(1)
 
     author_email = config.get("author_email", "")
@@ -829,7 +829,7 @@ def main() -> None:  # noqa: C901
     )
     if filtering_enabled and not processed_commits:
         console.print(
-            "[yellow]⚠️  All commits matched the default noise filter. Falling back to unfiltered commits for this run.[/yellow]"
+            "[yellow][!]  All commits matched the default noise filter. Falling back to unfiltered commits for this run.[/yellow]"
         )
         processed_commits = annotate_commits(all_commits)
 
@@ -860,7 +860,7 @@ def main() -> None:  # noqa: C901
         quality["score"] = int(cached_entry.get("quality_score") or 0)  # type: ignore[call-overload]
         used_cache = True
         cache_time = str(cached_entry.get("created_at", ""))[11:16]
-        console.print(f"[dim]⚡ Using cached standup from {cache_time}[/dim]")
+        console.print(f"[dim][!] Using cached standup from {cache_time}[/dim]")
     else:
         enforce_rate_limit(config, force=args.force)
 
@@ -883,7 +883,7 @@ def main() -> None:  # noqa: C901
                 raw_standup_text = provider.generate_standup(prompt, tone)
                 quality = score_standup(raw_standup_text, provider)
         except LLMProviderError as exc:
-            console.print(f"[red]❌ {sanitize_error_message(exc)}[/red]")
+            console.print(f"[red][x] {sanitize_error_message(exc)}[/red]")
             sys.exit(1)
 
         usage = load_usage()
@@ -921,10 +921,10 @@ def main() -> None:  # noqa: C901
             import pyperclip
 
             pyperclip.copy(final_output)
-            console.print("[green]✅ Copied to clipboard![/green]")
+            console.print("[green][+] Copied to clipboard![/green]")
         except Exception as exc:
             console.print(
-                f"[yellow]⚠️  Clipboard copy failed: {sanitize_error_message(exc)}[/yellow]"
+                f"[yellow][!]  Clipboard copy failed: {sanitize_error_message(exc)}[/yellow]"
             )
 
     if args.slack:
@@ -932,7 +932,7 @@ def main() -> None:  # noqa: C901
         if webhook:
             _post_to_slack(webhook, final_output)
         else:
-            console.print("[red]❌ No Slack webhook configured.[/red]")
+            console.print("[red][x] No Slack webhook configured.[/red]")
 
     duration_ms = int((time.perf_counter() - started_at) * 1000)
     log_event(
