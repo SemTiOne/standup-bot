@@ -52,7 +52,7 @@ def _deep_merge(base: dict, override: dict) -> dict:
 
 def load_config() -> dict:
     """Load and validate the StandupBot config file."""
-    from standup.security import enforce_file_permissions
+    from standup.security import enforce_file_permissions, read_text_restricted
 
     config_path = Path(CONFIG_PATH)
 
@@ -64,7 +64,7 @@ def load_config() -> dict:
     else:
         enforce_file_permissions(CONFIG_PATH, label="Config file")
         try:
-            raw_config = json.loads(config_path.read_text(encoding="utf-8"))
+            raw_config = json.loads(read_text_restricted(CONFIG_PATH, label="Config file"))
         except json.JSONDecodeError as exc:
             console.print(
                 f"[red]❌ Invalid JSON in {CONFIG_PATH}: {sanitize_error_message(exc)}[/red]"

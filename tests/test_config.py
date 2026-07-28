@@ -75,6 +75,8 @@ def test_load_config_does_not_leak_api_key_across_calls(tmp_path, monkeypatch):
 
 
 def test_save_config_writes_json(tmp_path, monkeypatch):
+    from standup.security import read_text_restricted
+
     cfg_path = tmp_path / ".standup.json"
     monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
 
@@ -92,12 +94,14 @@ def test_save_config_writes_json(tmp_path, monkeypatch):
         "rate_limit": {"cooldown_minutes": 30, "max_calls_per_day": 10, "enabled": True},
     }
     save_config(config)
-    data = json.loads(cfg_path.read_text())
+    data = json.loads(read_text_restricted(str(cfg_path)))
     assert data["tone"] == "casual"
     assert data["provider"]["name"] == "ollama"
 
 
 def test_save_config_valid_json(tmp_path, monkeypatch):
+    from standup.security import read_text_restricted
+
     cfg_path = tmp_path / ".standup.json"
     monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
     save_config(
@@ -116,7 +120,7 @@ def test_save_config_valid_json(tmp_path, monkeypatch):
         }
     )
     # Should parse without error
-    data = json.loads(cfg_path.read_text())
+    data = json.loads(read_text_restricted(str(cfg_path)))
     assert isinstance(data, dict)
 
 
@@ -215,6 +219,8 @@ def _fake_keyring(monkeypatch):
 
 
 def test_save_config_scrubs_secrets_from_disk_when_keychain_available(tmp_path, monkeypatch):
+    from standup.security import read_text_restricted
+
     _fake_keyring(monkeypatch)
     cfg_path = tmp_path / ".standup.json"
     monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
@@ -225,7 +231,7 @@ def test_save_config_scrubs_secrets_from_disk_when_keychain_available(tmp_path, 
 
     save_config(config)
 
-    on_disk = json.loads(cfg_path.read_text())
+    on_disk = json.loads(read_text_restricted(str(cfg_path)))
     assert on_disk["provider"]["groq"]["api_key"] == ""
     assert on_disk["slack_webhook_url"] == ""
     assert config["provider"]["groq"]["api_key"] == "gsk_realsecret"
@@ -233,6 +239,10 @@ def test_save_config_scrubs_secrets_from_disk_when_keychain_available(tmp_path, 
 
 
 def test_save_config_keeps_secrets_on_disk_without_a_keychain(tmp_path, monkeypatch):
+    from standup.security import read_text_restricted
+
+    monkeypatch.setattr("standup.security.store_secret", lambda _key, _value: False)
+
     cfg_path = tmp_path / ".standup.json"
     monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
 
@@ -241,7 +251,7 @@ def test_save_config_keeps_secrets_on_disk_without_a_keychain(tmp_path, monkeypa
 
     save_config(config)
 
-    on_disk = json.loads(cfg_path.read_text())
+    on_disk = json.loads(read_text_restricted(str(cfg_path)))
     assert on_disk["provider"]["groq"]["api_key"] == "gsk_realsecret"
 
 

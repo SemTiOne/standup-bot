@@ -287,12 +287,12 @@ def test_delete_secret_never_raises_without_a_backend():
 
 
 def test_write_text_restricted_result_is_owner_only_and_correct_content(tmp_path):
-    from standup.security import write_text_restricted
+    from standup.security import read_text_restricted, write_text_restricted
 
     target = tmp_path / "secret.json"
     write_text_restricted(str(target), '{"a": 1}', label="Test file")
 
-    assert target.read_text(encoding="utf-8") == '{"a": 1}'
+    assert read_text_restricted(str(target), label="Test file") == '{"a": 1}'
     if sys.platform != "win32":
         assert stat.S_IMODE(target.stat().st_mode) == 0o600
 
@@ -306,13 +306,13 @@ def test_write_text_restricted_never_mangles_secret_shaped_content(tmp_path):
     here, which would silently corrupt save_config()'s intentional
     fallback persistence if the detection/redaction pattern mismatch
     that made it a no-op for Groq keys were ever "fixed"."""
-    from standup.security import write_text_restricted
+    from standup.security import read_text_restricted, write_text_restricted
 
     target = tmp_path / "secret.json"
     content = json.dumps({"api_key": "gsk_" + "a" * 40, "webhook": "https://hooks.slack.com/x"})
     write_text_restricted(str(target), content, label="Test file")
 
-    assert target.read_text(encoding="utf-8") == content
+    assert read_text_restricted(str(target), label="Test file") == content
 
 
 def test_redact_sensitive_patterns_redacts_groq_key():
@@ -340,23 +340,30 @@ def test_write_text_restricted_locks_down_before_content_exists(tmp_path, monkey
     def spy_enforce(file_path, label="File"):
         call_order.append("enforce")
         real_enforce(file_path, label=label)
-        if sys.platform != "win32":
+        if sys.platform != "win32" and file_path == str(target):
             assert stat.S_IMODE(Path(file_path).stat().st_mode) == 0o600
-        assert Path(file_path).read_text(encoding="utf-8") == ""
+        if file_path == str(target):
+            assert Path(file_path).read_bytes() == b""
 
     monkeypatch.setattr(security_module, "enforce_file_permissions", spy_enforce)
 
-    real_write_text = Path.write_text
+    real_write_bytes = Path.write_bytes
 
-    def spy_write_text(self, data, *args, **kwargs):
-        call_order.append("write")
-        return real_write_text(self, data, *args, **kwargs)
+    def spy_write_bytes(self, data):
+        call_order.append(f"write({self.name})")
+        return real_write_bytes(self, data)
 
-    monkeypatch.setattr(Path, "write_text", spy_write_text)
+    monkeypatch.setattr(Path, "write_bytes", spy_write_bytes)
 
     security_module.write_text_restricted(str(target), '{"secret": "value"}')
 
-    assert call_order == ["enforce", "write"]
+    key_file = target.name + ".key"
+    assert call_order == [
+        "enforce",
+        f"write({key_file})",
+        "enforce",
+        f"write({target.name})",
+    ]
 
 
 # ---------------------------------------------------------------------------

@@ -22,6 +22,7 @@ setup(
         "rich>=13.0.0,<16.0.0",
         "requests>=2.31.0,<3.0.0",
         "keyring>=24.0.0,<26.0.0",
+        "cryptography>=41.0.0,<44.0.0",
     ],
     extras_require={
         "dev": [

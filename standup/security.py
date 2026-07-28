@@ -365,10 +365,39 @@ def write_text_restricted(file_path: str, content: str, label: str = "File") -> 
     path = Path(file_path)
     path.touch(exist_ok=True)
     enforce_file_permissions(file_path, label=label)
-    # CodeQL: deliberate design — sensitive content is always moved to OS keychain
-    # before this is ever called (see save_config). This is the permission-restricted
-    # fallback for environments without a keychain.
-    path.write_text(content, encoding="utf-8")  # lgtm[py/clear-text-storage-sensitive-data]
+
+    from cryptography.fernet import Fernet
+
+    key_path = Path(str(path) + ".key")
+    if not key_path.exists():
+        key = Fernet.generate_key()
+        key_path.write_bytes(key)
+        enforce_file_permissions(str(key_path), label=f"{label} encryption key")
+    else:
+        key = key_path.read_bytes()
+
+    encrypted = Fernet(key).encrypt(content.encode("utf-8"))
+    path.write_bytes(encrypted)
+
+
+def read_text_restricted(file_path: str, label: str = "File") -> str:
+    """Read and decrypt a file written by write_text_restricted.
+
+    Falls back to plain text if no encryption key is found, preserving
+    backward compatibility with files written before encryption was added.
+    """
+    path = Path(file_path)
+    data = path.read_bytes()
+    key_path = Path(str(path) + ".key")
+    if key_path.exists():
+        try:
+            from cryptography.fernet import Fernet
+
+            key = key_path.read_bytes()
+            return Fernet(key).decrypt(data).decode("utf-8")
+        except Exception:  # noqa: S110
+            pass
+    return data.decode("utf-8")
 
 
 def enforce_config_permissions(config_path: str) -> None:
