@@ -3,6 +3,7 @@
 Generate standup updates from recent git activity with a local Ollama model or Groq's free cloud tier.
 
 ![Tests](https://github.com/SemTiOne/standup-bot/actions/workflows/tests.yml/badge.svg)
+[![codecov](https://codecov.io/gh/SemTiOne/standup-bot/graph/badge.svg)](https://codecov.io/gh/SemTiOne/standup-bot)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
