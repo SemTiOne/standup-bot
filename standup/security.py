@@ -148,7 +148,7 @@ def redact_sensitive_patterns(text: str) -> str:
             text = pattern.sub(f"[REDACTED:{tag}]", text)
     if text != original:
         console.print(
-            "[yellow]⚠️  Sensitive patterns detected and redacted from commit messages.[/yellow]"
+            "[yellow][!]  Sensitive patterns detected and redacted from commit messages.[/yellow]"
         )
         log_event("redaction_fired", count=match_count)
     return text
@@ -224,7 +224,7 @@ def store_secret(key_name: str, value: str) -> bool:
         if key_name not in _KEYRING_WARNED_KEYS:
             _KEYRING_WARNED_KEYS.add(key_name)
             console.print(
-                f"[yellow]⚠️  No OS keychain available for {key_name}; "
+                f"[yellow][!]  No OS keychain available for {key_name}; "
                 "storing it in the config file instead (permissions "
                 "still restricted to your user).[/yellow]"
             )
@@ -318,7 +318,7 @@ def _enforce_windows_acl(file_path: str, label: str = "File") -> None:
     if file_path not in _PERMISSION_WARNED_PATHS:
         _PERMISSION_WARNED_PATHS.add(file_path)
         console.print(
-            f"[yellow]⚠️  Could not restrict permissions on {label} via icacls. "
+            f"[yellow][!]  Could not restrict permissions on {label} via icacls. "
             "Ensure only your user can read it.[/yellow]"
         )
 
@@ -674,6 +674,6 @@ def run_doctor() -> None:  # noqa: C901
     score = int(100 * (passed + 0.5 * warned) / total) if total else 0
     color = "green" if score >= 80 else "yellow" if score >= 60 else "red"
     console.print(
-        f"\n[bold {color}]Health Score: {score}/100[/bold {color}]  ✅ {passed}  ⚠️ {warned}  ❌ {failed}"
+        f"\n[bold {color}]Health Score: {score}/100[/bold {color}]  [+] {passed}  [!] {warned}  [x] {failed}"
     )
     log_event("doctor_run", health_score=score, passed=passed, warned=warned, failed=failed)

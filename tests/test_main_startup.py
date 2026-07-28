@@ -71,15 +71,12 @@ def _make_test_repo(tmp_path):
 
     repo = tmp_path / "repo"
     repo.mkdir()
-    env = {"GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "a@b.com"}
     subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
     subprocess.run(["git", "config", "user.email", "a@b.com"], cwd=repo, check=True)
     subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
     (repo / "f.txt").write_text("hi")
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
-    subprocess.run(
-        ["git", "commit", "-q", "-m", "feat: add file"], cwd=repo, check=True, env=None or env
-    )
+    subprocess.run(["git", "commit", "-q", "-m", "feat: add file"], cwd=repo, check=True)
     return str(repo)
 
 

@@ -69,7 +69,7 @@ def get_recent_commits(
     try:
         import git  # type: ignore[import]
     except ImportError:
-        console.print("[red]❌ GitPython is not installed. Run: pip install gitpython[/red]")
+        console.print("[red][x] GitPython is not installed. Run: pip install gitpython[/red]")
         return []
 
     repo_name = Path(repo_path).name
@@ -78,14 +78,14 @@ def get_recent_commits(
     try:
         repo = git.Repo(repo_path)
     except git.exc.InvalidGitRepositoryError:
-        console.print(f"[yellow]⚠️  Not a git repository: {repo_path}[/yellow]")
+        console.print(f"[yellow][!] Not a git repository: {repo_path}[/yellow]")
         return []
     except git.exc.NoSuchPathError:
-        console.print(f"[yellow]⚠️  Repo path not found: {repo_path}[/yellow]")
+        console.print(f"[yellow][!] Repo path not found: {repo_path}[/yellow]")
         return []
     except Exception as exc:
         console.print(
-            f"[yellow]⚠️  Could not open repo {repo_path}: {sanitize_error_message(exc)}[/yellow]"
+            f"[yellow][!] Could not open repo {repo_path}: {sanitize_error_message(exc)}[/yellow]"
         )
         return []
 
@@ -137,7 +137,7 @@ def get_recent_commits(
 
             if len(commits) >= MAX_COMMITS_PER_RUN:
                 console.print(
-                    f"[yellow]⚠️  Commit count exceeded {MAX_COMMITS_PER_RUN}; truncating to the most recent entries.[/yellow]"
+                    f"[yellow][!] Commit count exceeded {MAX_COMMITS_PER_RUN}; truncating to the most recent entries.[/yellow]"
                 )
                 log_event(
                     "commit_limit_truncated",
@@ -147,7 +147,7 @@ def get_recent_commits(
                 break
     except Exception as exc:
         console.print(
-            f"[yellow]⚠️  Error reading commits from {repo_path}: {sanitize_error_message(exc)}[/yellow]"
+            f"[yellow][!] Error reading commits from {repo_path}: {sanitize_error_message(exc)}[/yellow]"
         )
 
     return commits[:MAX_COMMITS_PER_RUN]

@@ -1,7 +1,6 @@
 """Tests for standup/git_reader.py."""
 
 import builtins
-import subprocess
 import sys
 import types
 
@@ -72,28 +71,16 @@ def test_infer_modules_mixed_depths():
 
 @pytest.fixture
 def git_repo(tmp_path):
-    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
-    subprocess.run(
-        ["git", "config", "user.email", "test@example.com"],
-        cwd=str(tmp_path),
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(
-        ["git", "config", "user.name", "Test User"],
-        cwd=str(tmp_path),
-        check=True,
-        capture_output=True,
-    )
+    import git as git_module
+
+    repo = git_module.Repo.init(str(tmp_path))
+    with repo.config_writer() as cw:
+        cw.set_value("user", "email", "test@example.com")
+        cw.set_value("user", "name", "Test User")
     file_path = tmp_path / "hello.py"
     file_path.write_text("print('hello')\n", encoding="utf-8")
-    subprocess.run(["git", "add", "."], cwd=str(tmp_path), check=True, capture_output=True)
-    subprocess.run(
-        ["git", "commit", "-m", "initial commit"],
-        cwd=str(tmp_path),
-        check=True,
-        capture_output=True,
-    )
+    repo.index.add(["hello.py"])
+    repo.index.commit("initial commit")
     return tmp_path
 
 

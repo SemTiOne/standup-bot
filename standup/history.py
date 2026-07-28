@@ -265,7 +265,7 @@ def init_db() -> None:
     except (sqlite3.Error, OSError) as exc:
         log_event("db_error", operation="init")
         console.print(
-            f"[yellow]⚠️  Could not initialize history database: {sanitize_error_message(exc)}[/yellow]"
+            f"[yellow][!]  Could not initialize history database: {sanitize_error_message(exc)}[/yellow]"
         )
 
 
@@ -331,7 +331,7 @@ def find_cached_standup_entry(
     except sqlite3.Error as exc:
         log_event("db_error", operation="find_cached")
         console.print(
-            f"[yellow]⚠️  Could not read standup history: {sanitize_error_message(exc)}[/yellow]"
+            f"[yellow][!]  Could not read standup history: {sanitize_error_message(exc)}[/yellow]"
         )
         return None
 
@@ -447,7 +447,7 @@ def save_standup(
     except (sqlite3.Error, OSError, TypeError, ValueError) as exc:
         log_event("db_error", operation="save")
         console.print(
-            f"[yellow]⚠️  Could not save standup history: {sanitize_error_message(exc)}[/yellow]"
+            f"[yellow][!]  Could not save standup history: {sanitize_error_message(exc)}[/yellow]"
         )
 
 
@@ -480,7 +480,7 @@ def get_history(limit: int = 10) -> list[dict[str, object]]:
     except (sqlite3.Error, TypeError, ValueError) as exc:
         log_event("db_error", operation="history")
         console.print(
-            f"[yellow]⚠️  Could not fetch standup history: {sanitize_error_message(exc)}[/yellow]"
+            f"[yellow][!]  Could not fetch standup history: {sanitize_error_message(exc)}[/yellow]"
         )
         return []
 
@@ -512,7 +512,7 @@ def clear_history(older_than_days: int | None = None) -> int:
     except (sqlite3.Error, TypeError, ValueError) as exc:
         log_event("db_error", operation="clear")
         console.print(
-            f"[yellow]⚠️  Could not clear standup history: {sanitize_error_message(exc)}[/yellow]"
+            f"[yellow][!]  Could not clear standup history: {sanitize_error_message(exc)}[/yellow]"
         )
         return 0
 

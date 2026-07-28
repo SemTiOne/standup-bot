@@ -152,7 +152,7 @@ def enforce_rate_limit(config: dict, force: bool = False) -> None:
     if not isinstance(rate, dict) or not rate.get("enabled", True):
         return
     if force:
-        console.print("[dim]⚡ Rate limit bypassed with --force[/dim]")
+        console.print("[dim][!] Rate limit bypassed with --force[/dim]")
         return
 
     cooldown_minutes = int(rate.get("cooldown_minutes", 30))
@@ -174,7 +174,7 @@ def enforce_rate_limit(config: dict, force: bool = False) -> None:
     if not allowed:
         log_event("rate_limit_hit", limit_type="daily", seconds_remaining=0)
         console.print(
-            f"[yellow]🚫 Daily cap reached ({calls_today}/{max_calls} calls today).[/yellow]\n"
+            f"[yellow][x] Daily cap reached ({calls_today}/{max_calls} calls today).[/yellow]\n"
             "[dim]Use --force to bypass, or wait until tomorrow.[/dim]"
         )
         sys.exit(1)
