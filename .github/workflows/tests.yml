@@ -74,11 +74,25 @@ jobs:
       - name: Audit dependencies
         run: pip-audit -r requirements.txt
 
+  pre-commit:
+    name: Pre-commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files
+
   test:
     name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [lint, type-check, security-scan, dependency-audit]
+    needs: [lint, type-check, security-scan, dependency-audit, pre-commit]
     strategy:
       fail-fast: false
       matrix:
