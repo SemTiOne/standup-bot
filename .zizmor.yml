@@ -1,2 +1,4 @@
-audits:
-  dependabot-cooldown: ignore
+rules:
+  dependabot-cooldown:
+    ignore:
+      - .github/dependabot.yml
