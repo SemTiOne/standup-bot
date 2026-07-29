@@ -35,7 +35,11 @@ env/
 .mypy_cache/
 .coverage
 coverage.xml
+junit.xml
 htmlcov/
+
+# Graphify knowledge graph cache
+graphify-out/
 
 # OS
 .DS_Store
