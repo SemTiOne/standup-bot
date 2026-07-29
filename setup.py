@@ -4,8 +4,8 @@ with open("README.md", encoding="utf-8") as file_handle:
     long_description = file_handle.read()
 
 setup(
-    name="standupbot",
-    version="0.2.5",
+    name="standup-bot",
+    version="0.2.6",
     description="Generate daily standup summaries from your git history using local or free cloud LLMs.",
     long_description=long_description,
     long_description_content_type="text/markdown",

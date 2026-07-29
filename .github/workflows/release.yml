@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/standupbot/
+      url: https://pypi.org/project/standup-bot/
     permissions:
       id-token: write
     steps:
