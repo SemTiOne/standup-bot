@@ -408,8 +408,12 @@ def validate_provider_config(provider_config: Any) -> tuple[bool, str]:
         if not isinstance(groq_model, str) or not groq_model.strip():
             errors.append("provider.groq.model must be a non-empty string.")
         api_key = groq_cfg.get("api_key", "")
-        if api_key and (not isinstance(api_key, str) or not api_key.startswith("gsk_")):
-            errors.append("provider.groq.api_key must start with 'gsk_' when provided.")
+        if api_key and (
+            not isinstance(api_key, str) or not api_key.startswith("gsk_") or len(api_key) < 40
+        ):
+            errors.append(
+                "provider.groq.api_key must start with 'gsk_' and be at least 40 characters when provided."
+            )
 
     return (False, " | ".join(errors)) if errors else (True, "")
 

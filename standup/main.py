@@ -53,9 +53,8 @@ def _post_to_slack(webhook_url: str, text: str) -> None:
         if response.status_code == 200:
             console.print("[green][+] Posted to Slack![/green]")
         else:
-            console.print(
-                f"[red][x] Slack post failed: {response.status_code} {response.text}[/red]"
-            )
+            safe_body = sanitize_error_message(response.text[:200])
+            console.print(f"[red][x] Slack post failed: {response.status_code} {safe_body}[/red]")
     except Exception as exc:
         console.print(f"[red][x] Slack post error: {sanitize_error_message(exc)}[/red]")
 
@@ -544,248 +543,171 @@ def run_setup_wizard() -> None:
     console.print("\n[bold green]Setup complete! Run: standup[/bold green]")
 
 
-def main() -> None:  # noqa: C901
-    """CLI entry point."""
-    from standup.validator import (
-        validate_cli_args,
-        validate_hours_arg,
-        validate_positive_int_arg,
-        validate_provider_arg,
-    )
+def _handle_version() -> bool:
+    """Handle --version flag. Return True if handled."""
+    console.print(f"StandupBot v{__version__}")
+    return True
 
-    parser = argparse.ArgumentParser(
-        prog="standup",
-        description="StandupBot - Generate daily standups from your git history.",
-    )
 
-    subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("doctor", help="Run security and health checks")
-    subparsers.add_parser("usage", help="Show API usage stats")
-    subparsers.add_parser("models", help="List available local Ollama models")
-    subparsers.add_parser("templates", help="List available standup templates")
-    logs_parser = subparsers.add_parser("logs", help="Show or clear structured logs")
-    logs_parser.add_argument(
-        "--tail",
-        type=lambda value: validate_positive_int_arg("--tail", value, 1, 200),
-        default=20,
-        help="Number of log entries to show",
-    )
-    logs_parser.add_argument("--clear", action="store_true", help="Clear the log file")
+def _handle_changelog() -> bool:
+    """Handle --changelog flag."""
+    changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"
+    if changelog_path.exists():
+        console.print(changelog_path.read_text(encoding="utf-8"))
+    else:
+        console.print("[yellow]CHANGELOG.md not found.[/yellow]")
+    return True
 
-    history_parser = subparsers.add_parser("history", help="Show or clear standup history")
-    history_parser.add_argument(
-        "--limit",
-        type=lambda value: validate_positive_int_arg("--limit", value, 1, 100),
-        default=10,
-        help="Number of history entries to show",
-    )
-    history_parser.add_argument("--clear", action="store_true", help="Clear history entries")
-    history_parser.add_argument(
-        "--days",
-        type=lambda value: validate_positive_int_arg("--days", value, 1, 3650),
-        help="Only clear entries older than this many days",
-    )
 
-    warmup_parser = subparsers.add_parser("warm-up", help="Pre-load the configured model")
-    warmup_parser.add_argument(
-        "--install-startup",
-        action="store_true",
-        help="Install warm-up to run automatically at login",
-    )
-    warmup_parser.add_argument(
-        "--uninstall-startup", action="store_true", help="Remove startup warm-up integration"
-    )
+def _handle_doctor() -> bool:
+    """Handle `standup doctor` subcommand."""
+    from standup.security import run_doctor
 
-    parser.add_argument("--hours", type=validate_hours_arg, metavar="N", help="Hours to look back")
-    parser.add_argument("--week", action="store_true", help="Look back 7 days (168 hours)")
-    parser.add_argument("--copy", action="store_true", help="Copy output to clipboard")
-    parser.add_argument("--slack", action="store_true", help="Post to Slack webhook")
-    parser.add_argument("--raw", action="store_true", help="Print raw git data before summary")
-    parser.add_argument(
-        "--provider",
-        type=validate_provider_arg,
-        metavar="NAME",
-        help="Provider override: ollama or groq (one-time, does not change config)",
-    )
-    parser.add_argument("--force", action="store_true", help="Bypass rate limit")
-    parser.add_argument("--setup", action="store_true", help="Run interactive setup wizard")
-    parser.add_argument("--version", action="store_true", help="Print version")
-    parser.add_argument("--changelog", action="store_true", help="Print recent changelog")
-    parser.add_argument("--no-cache", action="store_true", help="Bypass standup history cache")
-    parser.add_argument("--no-filter", action="store_true", help="Disable commit noise filtering")
-    parser.add_argument("--template", metavar="NAME", help="Template override for this run")
-    parser.add_argument("--verbose", action="store_true", help="Show quality score breakdown")
-    parser.add_argument(
-        "--maintenance", action="store_true", help="Run safe local maintenance tasks"
-    )
+    run_doctor()
+    return True
 
-    args = parser.parse_args()
 
-    if args.version:
-        console.print(f"StandupBot v{__version__}")
-        return
+def _handle_usage() -> bool:
+    """Handle `standup usage` subcommand."""
+    from standup.rate_limiter import get_usage_report
 
-    if args.changelog:
-        changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"
-        if changelog_path.exists():
-            console.print(changelog_path.read_text(encoding="utf-8"))
+    console.print(get_usage_report())
+    return True
+
+
+def _handle_logs(args: argparse.Namespace) -> bool:
+    """Handle `standup logs` subcommand."""
+    if args.clear:
+        if not _confirm_action("Clear structured logs?"):
+            console.print("[yellow]Log clear cancelled.[/yellow]")
+            return True
+        if clear_logs():
+            console.print("[green][+] Log file cleared.[/green]")
         else:
-            console.print("[yellow]CHANGELOG.md not found.[/yellow]")
-        return
+            console.print("[yellow][!]  Could not clear log file.[/yellow]")
+        return True
 
-    if args.setup:
-        run_setup_wizard()
-        return
+    entries = read_log_entries(args.tail)
+    if not entries:
+        console.print("[yellow]No structured logs found yet.[/yellow]")
+        return True
 
-    from standup.config import load_config
+    table = Table(title="Standup Logs")
+    table.add_column("Time", style="bold cyan")
+    table.add_column("Event")
+    table.add_column("Detail")
+    for entry in entries:
+        detail_parts = []
+        for key in sorted(entry.keys()):
+            if key in ("ts", "event", "level"):
+                continue
+            detail_parts.append(f"{key}={entry[key]}")
+        table.add_row(
+            str(entry.get("ts", ""))[11:19],
+            str(entry.get("event", "")),
+            ", ".join(detail_parts)[:120],
+        )
+    console.print(table)
+    return True
 
-    config = load_config()
-    log_event(
-        "app_start",
-        version=__version__,
-        provider=config.get("provider", {}).get("name", "unknown"),
-        python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-    )
 
-    errors = validate_cli_args(args, config)
-    if errors:
-        for error in errors:
-            console.print(f"[red][x] {error}[/red]")
+def _handle_models(config: dict) -> bool:
+    """Handle `standup models` subcommand."""
+    from standup.llm.ollama_provider import OllamaProvider
+
+    provider = OllamaProvider(config)
+    models = provider.list_local_models()
+    if models:
+        console.print("[bold]Local Ollama models:[/bold]")
+        for model_name in models:
+            console.print(f"  • {model_name}")
+    else:
+        console.print(
+            "[yellow]No models found. Is Ollama running?[/yellow]\n  Start it with: ollama serve\n  Pull a model:  ollama pull llama3"
+        )
+    return True
+
+
+def _handle_templates_cmd(config: dict) -> bool:
+    """Handle `standup templates` subcommand."""
+    from standup.templates import list_templates
+
+    table = Table(title="Standup Templates")
+    table.add_column("Name", style="bold cyan")
+    table.add_column("Type")
+    available = list_templates(config.get("custom_templates", {}))
+    for name in available:
+        template_type = "Custom" if name in config.get("custom_templates", {}) else "Built-in"
+        table.add_row(name, template_type)
+    console.print(table)
+    return True
+
+
+def _handle_history(args: argparse.Namespace) -> bool:
+    """Handle `standup history` subcommand."""
+    from standup.history import clear_history, get_history
+
+    if args.clear:
+        description = f"entries older than {args.days} days" if args.days else "all history entries"
+        if not _confirm_action(f"Delete {description}?"):
+            console.print("[yellow]History clear cancelled.[/yellow]")
+            return True
+        deleted = clear_history(args.days)
+        noun = "entry" if deleted == 1 else "entries"
+        console.print(f"[green][+] Deleted {deleted} history {noun}.[/green]")
+        return True
+
+    entries = get_history(args.limit)
+    if not entries:
+        console.print("[yellow]No standup history found yet.[/yellow]")
+        return True
+
+    table = Table(title="Standup History")
+    table.add_column("Date", style="bold cyan")
+    table.add_column("Repos")
+    table.add_column("Provider")
+    table.add_column("Preview")
+    for entry in entries:
+        preview = str(entry.get("standup_text", "")).replace("\n", " ")[:80]
+        _repos = entry.get("repos")
+        repos = ", ".join(str(r) for r in (_repos if isinstance(_repos, list) else []))
+        table.add_row(
+            str(entry.get("created_at", ""))[:16],
+            repos,
+            str(entry.get("provider", "")),
+            preview,
+        )
+    console.print(table)
+    return True
+
+
+def _handle_warmup(args: argparse.Namespace, config: dict) -> bool:
+    """Handle `standup warm-up` subcommand."""
+    from standup.llm.factory import get_provider_with_fallback
+    from standup.warmup import warm_up_provider
+
+    if args.install_startup:
+        _install_startup(config)
+        return True
+    if args.uninstall_startup:
+        _uninstall_startup()
+        return True
+
+    provider = get_provider_with_fallback(config, override=args.provider)  # type: ignore[assignment]
+    success = warm_up_provider(provider, verbose=True)
+    if not success:
         sys.exit(1)
+    return True
 
-    if args.command == "doctor":
-        from standup.security import run_doctor
 
-        run_doctor()
-        return
+def _handle_maintenance() -> bool:
+    """Handle --maintenance flag."""
+    _run_maintenance()
+    return True
 
-    if args.command == "usage":
-        from standup.rate_limiter import get_usage_report
 
-        console.print(get_usage_report())
-        return
-
-    if args.command == "logs":
-        if args.clear:
-            if not _confirm_action("Clear structured logs?"):
-                console.print("[yellow]Log clear cancelled.[/yellow]")
-                return
-            if clear_logs():
-                console.print("[green][+] Log file cleared.[/green]")
-            else:
-                console.print("[yellow][!]  Could not clear log file.[/yellow]")
-            return
-
-        entries = read_log_entries(args.tail)
-        if not entries:
-            console.print("[yellow]No structured logs found yet.[/yellow]")
-            return
-
-        table = Table(title="Standup Logs")
-        table.add_column("Time", style="bold cyan")
-        table.add_column("Event")
-        table.add_column("Detail")
-        for entry in entries:
-            detail_parts = []
-            for key in sorted(entry.keys()):
-                if key in ("ts", "event", "level"):
-                    continue
-                detail_parts.append(f"{key}={entry[key]}")
-            table.add_row(
-                str(entry.get("ts", ""))[11:19],
-                str(entry.get("event", "")),
-                ", ".join(detail_parts)[:120],
-            )
-        console.print(table)
-        return
-
-    if args.command == "models":
-        from standup.llm.ollama_provider import OllamaProvider
-
-        provider = OllamaProvider(config)
-        models = provider.list_local_models()
-        if models:
-            console.print("[bold]Local Ollama models:[/bold]")
-            for model_name in models:
-                console.print(f"  • {model_name}")
-        else:
-            console.print(
-                "[yellow]No models found. Is Ollama running?[/yellow]\n  Start it with: ollama serve\n  Pull a model:  ollama pull llama3"
-            )
-        return
-
-    if args.command == "templates":
-        from standup.templates import list_templates
-
-        table = Table(title="Standup Templates")
-        table.add_column("Name", style="bold cyan")
-        table.add_column("Type")
-        available = list_templates(config.get("custom_templates", {}))
-        for name in available:
-            template_type = "Custom" if name in config.get("custom_templates", {}) else "Built-in"
-            table.add_row(name, template_type)
-        console.print(table)
-        return
-
-    if args.command == "history":
-        from standup.history import clear_history, get_history
-
-        if args.clear:
-            description = (
-                f"entries older than {args.days} days" if args.days else "all history entries"
-            )
-            if not _confirm_action(f"Delete {description}?"):
-                console.print("[yellow]History clear cancelled.[/yellow]")
-                return
-            deleted = clear_history(args.days)
-            noun = "entry" if deleted == 1 else "entries"
-            console.print(f"[green][+] Deleted {deleted} history {noun}.[/green]")
-            return
-
-        entries = get_history(args.limit)
-        if not entries:
-            console.print("[yellow]No standup history found yet.[/yellow]")
-            return
-
-        table = Table(title="Standup History")
-        table.add_column("Date", style="bold cyan")
-        table.add_column("Repos")
-        table.add_column("Provider")
-        table.add_column("Preview")
-        for entry in entries:
-            preview = str(entry.get("standup_text", "")).replace("\n", " ")[:80]
-            _repos = entry.get("repos")
-            repos = ", ".join(str(r) for r in (_repos if isinstance(_repos, list) else []))
-            table.add_row(
-                str(entry.get("created_at", ""))[:16],
-                repos,
-                str(entry.get("provider", "")),
-                preview,
-            )
-        console.print(table)
-        return
-
-    if args.command == "warm-up":
-        from standup.llm.factory import get_provider_with_fallback
-        from standup.warmup import warm_up_provider
-
-        if args.install_startup:
-            _install_startup(config)
-            return
-        if args.uninstall_startup:
-            _uninstall_startup()
-            return
-
-        provider = get_provider_with_fallback(config, override=args.provider)  # type: ignore[assignment]
-        success = warm_up_provider(provider, verbose=True)
-        if not success:
-            sys.exit(1)
-        return
-
-    if args.maintenance:
-        _run_maintenance()
-        return
-
+def _run_generation(args: argparse.Namespace, config: dict) -> None:
+    """Run the main standup generation flow (extracted from main for testability)."""
     hours = 168 if args.week else args.hours or config.get("hours_lookback", 24)
     started_at = time.perf_counter()
 
@@ -945,6 +867,147 @@ def main() -> None:  # noqa: C901
         quality_score=int(quality.get("score") or 0),  # type: ignore[call-overload]
         duration_ms=duration_ms,
     )
+
+
+def main() -> None:
+    """CLI entry point."""
+    from standup.validator import (
+        validate_cli_args,
+        validate_hours_arg,
+        validate_positive_int_arg,
+        validate_provider_arg,
+    )
+
+    parser = argparse.ArgumentParser(
+        prog="standup",
+        description="StandupBot - Generate daily standups from your git history.",
+    )
+
+    subparsers = parser.add_subparsers(dest="command")
+    subparsers.add_parser("doctor", help="Run security and health checks")
+    subparsers.add_parser("usage", help="Show API usage stats")
+    subparsers.add_parser("models", help="List available local Ollama models")
+    subparsers.add_parser("templates", help="List available standup templates")
+    logs_parser = subparsers.add_parser("logs", help="Show or clear structured logs")
+    logs_parser.add_argument(
+        "--tail",
+        type=lambda value: validate_positive_int_arg("--tail", value, 1, 200),
+        default=20,
+        help="Number of log entries to show",
+    )
+    logs_parser.add_argument("--clear", action="store_true", help="Clear the log file")
+
+    history_parser = subparsers.add_parser("history", help="Show or clear standup history")
+    history_parser.add_argument(
+        "--limit",
+        type=lambda value: validate_positive_int_arg("--limit", value, 1, 100),
+        default=10,
+        help="Number of history entries to show",
+    )
+    history_parser.add_argument("--clear", action="store_true", help="Clear history entries")
+    history_parser.add_argument(
+        "--days",
+        type=lambda value: validate_positive_int_arg("--days", value, 1, 3650),
+        help="Only clear entries older than this many days",
+    )
+
+    warmup_parser = subparsers.add_parser("warm-up", help="Pre-load the configured model")
+    warmup_parser.add_argument(
+        "--install-startup",
+        action="store_true",
+        help="Install warm-up to run automatically at login",
+    )
+    warmup_parser.add_argument(
+        "--uninstall-startup", action="store_true", help="Remove startup warm-up integration"
+    )
+
+    parser.add_argument("--hours", type=validate_hours_arg, metavar="N", help="Hours to look back")
+    parser.add_argument("--week", action="store_true", help="Look back 7 days (168 hours)")
+    parser.add_argument("--copy", action="store_true", help="Copy output to clipboard")
+    parser.add_argument("--slack", action="store_true", help="Post to Slack webhook")
+    parser.add_argument("--raw", action="store_true", help="Print raw git data before summary")
+    parser.add_argument(
+        "--provider",
+        type=validate_provider_arg,
+        metavar="NAME",
+        help="Provider override: ollama or groq (one-time, does not change config)",
+    )
+    parser.add_argument("--force", action="store_true", help="Bypass rate limit")
+    parser.add_argument("--setup", action="store_true", help="Run interactive setup wizard")
+    parser.add_argument("--version", action="store_true", help="Print version")
+    parser.add_argument("--changelog", action="store_true", help="Print recent changelog")
+    parser.add_argument("--no-cache", action="store_true", help="Bypass standup history cache")
+    parser.add_argument("--no-filter", action="store_true", help="Disable commit noise filtering")
+    parser.add_argument("--template", metavar="NAME", help="Template override for this run")
+    parser.add_argument("--verbose", action="store_true", help="Show quality score breakdown")
+    parser.add_argument(
+        "--maintenance", action="store_true", help="Run safe local maintenance tasks"
+    )
+
+    args = parser.parse_args()
+
+    if args.version:
+        _handle_version()
+        return
+
+    if args.changelog:
+        _handle_changelog()
+        return
+
+    if args.setup:
+        run_setup_wizard()
+        return
+
+    from standup.config import load_config
+
+    config = load_config()
+    log_event(
+        "app_start",
+        version=__version__,
+        provider=config.get("provider", {}).get("name", "unknown"),
+        python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+    )
+
+    errors = validate_cli_args(args, config)
+    if errors:
+        for error in errors:
+            console.print(f"[red][x] {error}[/red]")
+        sys.exit(1)
+
+    if args.command == "doctor":
+        _handle_doctor()
+        return
+
+    if args.command == "usage":
+        _handle_usage()
+        return
+
+    if args.command == "logs":
+        _handle_logs(args)
+        return
+
+    if args.command == "models":
+        _handle_models(config)
+        return
+
+    if args.command == "templates":
+        _handle_templates_cmd(config)
+        return
+
+    if args.command == "history":
+        _handle_history(args)
+        return
+
+    if args.command == "warm-up":
+        _handle_warmup(args, config)
+        return
+
+    if args.maintenance:
+        _handle_maintenance()
+        return
+
+    _run_generation(args, config)
+    return
 
 
 if __name__ == "__main__":
