@@ -259,21 +259,23 @@ def test_load_config_prefers_keychain_value_over_file(tmp_path, monkeypatch):
     from standup.config import load_config
 
     store = _fake_keyring(monkeypatch)
-    store[("standup-bot", "groq_api_key")] = "gsk_fromkeychain"
+    store[("standup-bot", "groq_api_key")] = "gsk_fromkeychain" + "x" * 30
 
     cfg_path = tmp_path / ".standup.json"
-    cfg_path.write_text(json.dumps({"provider": {"groq": {"api_key": "gsk_stalefilevalue"}}}))
+    cfg_path.write_text(
+        json.dumps({"provider": {"groq": {"api_key": "gsk_stalefilevalue" + "x" * 30}}})
+    )
     monkeypatch.setattr("standup.config.CONFIG_PATH", str(cfg_path))
 
     config = load_config()
-    assert config["provider"]["groq"]["api_key"] == "gsk_fromkeychain"
+    assert config["provider"]["groq"]["api_key"] == "gsk_fromkeychain" + "x" * 30
 
 
 def test_load_config_env_var_still_wins_over_keychain(tmp_path, monkeypatch):
     from standup.config import load_config
 
     store = _fake_keyring(monkeypatch)
-    store[("standup-bot", "groq_api_key")] = "gsk_fromkeychain"
+    store[("standup-bot", "groq_api_key")] = "gsk_fromkeychain" + "x" * 30
 
     cfg_path = tmp_path / ".standup.json"
     cfg_path.write_text(json.dumps({}))
