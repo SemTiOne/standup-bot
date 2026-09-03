@@ -118,8 +118,13 @@ def get_recent_commits(
                 stats = commit.stats.total
                 insertions = stats.get("insertions", 0)
                 deletions = stats.get("deletions", 0)
-            except Exception:  # noqa: S110
-                pass
+            except Exception as exc:
+                log_event(
+                    "git_diff_failed",
+                    repo=repo_name,
+                    hash=commit.hexsha[:7],
+                    error_type=type(exc).__name__,
+                )
 
             subject = commit.message.strip().splitlines()[0] if commit.message else ""
             commits.append(

@@ -46,6 +46,9 @@ _SENSITIVE_EXACT_KEYS = frozenset(
         "template_content",
     }
 )
+# `repos` is intentionally SAFE: it holds repo basenames (e.g. "my-app"),
+# not full paths, and is needed for usage debugging. Full paths would
+# contain `path` substring and get redacted by _SENSITIVE_SUBSTRINGS.
 _SAFE_EXACT_KEYS = frozenset(
     {
         "cached",

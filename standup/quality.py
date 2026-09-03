@@ -107,7 +107,7 @@ def _score_with_ollama(standup_text: str, provider: OllamaProvider) -> dict[str,
     Raises:
         None.
     """
-    prompt = SCORING_PROMPT_TEMPLATE.format(standup_text=standup_text)
+    prompt = SCORING_PROMPT_TEMPLATE.format(standup_text=standup_text[:2000])
     try:
         import ollama  # type: ignore[import]
 
@@ -137,7 +137,7 @@ def _score_with_groq(standup_text: str, provider: GroqProvider) -> dict[str, obj
     Raises:
         None.
     """
-    prompt = SCORING_PROMPT_TEMPLATE.format(standup_text=standup_text)
+    prompt = SCORING_PROMPT_TEMPLATE.format(standup_text=standup_text[:2000])
     if not provider.api_key:
         return _fallback_score()
 
@@ -176,7 +176,7 @@ def score_standup(standup_text: str, provider: BaseLLMProvider) -> dict[str, obj
         return _score_with_groq(standup_text, provider)
 
     try:
-        prompt = SCORING_PROMPT_TEMPLATE.format(standup_text=standup_text)
+        prompt = SCORING_PROMPT_TEMPLATE.format(standup_text=standup_text[:2000])
         response = provider.generate_standup(prompt, "formal")
         return _extract_json(response)
     except Exception:
