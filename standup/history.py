@@ -7,9 +7,11 @@ queries exclusively, and automatically prunes old history to keep long-term
 usage predictable.
 """
 
+import contextlib
 import hashlib
 import json
 import sqlite3
+from collections.abc import Iterator
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -46,25 +48,38 @@ def get_db_path() -> str:
     return str(Path.home() / _DB_NAME)
 
 
-def _get_connection(db_path: str) -> sqlite3.Connection:
+@contextlib.contextmanager
+def _get_connection(db_path: str) -> Iterator[sqlite3.Connection]:
     """
     Open a SQLite connection with hardened settings.
+
+    Context manager that yields the connection and guarantees close,
+    fixing unclosed-fd ResourceWarnings seen in tests.
 
     Args:
         db_path: Database path to connect to.
 
-    Returns:
+    Yields:
         Configured SQLite connection.
 
     Raises:
         sqlite3.Error: If SQLite cannot open the database.
     """
     conn = sqlite3.connect(db_path, timeout=5.0)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA busy_timeout=5000")
-    return conn
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("PRAGMA busy_timeout=5000")
+        yield conn  # type: ignore[misc]
+        conn.commit()
+    except Exception:
+        with contextlib.suppress(Exception):
+            conn.rollback()
+        raise
+    finally:
+        with contextlib.suppress(Exception):
+            conn.close()
 
 
 def _sanitize_for_storage(text: str) -> str:
