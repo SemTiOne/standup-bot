@@ -543,54 +543,54 @@ def run_setup_wizard() -> None:
     console.print("\n[bold green]Setup complete! Run: standup[/bold green]")
 
 
-def _handle_version() -> bool:
-    """Handle --version flag. Return True if handled."""
+def _handle_version() -> None:
+    """Handle --version flag."""
     console.print(f"StandupBot v{__version__}")
-    return True
+    return
 
 
-def _handle_changelog() -> bool:
+def _handle_changelog() -> None:
     """Handle --changelog flag."""
     changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"
     if changelog_path.exists():
         console.print(changelog_path.read_text(encoding="utf-8"))
     else:
         console.print("[yellow]CHANGELOG.md not found.[/yellow]")
-    return True
+    return
 
 
-def _handle_doctor() -> bool:
+def _handle_doctor() -> None:
     """Handle `standup doctor` subcommand."""
     from standup.security import run_doctor
 
     run_doctor()
-    return True
+    return
 
 
-def _handle_usage() -> bool:
+def _handle_usage() -> None:
     """Handle `standup usage` subcommand."""
     from standup.rate_limiter import get_usage_report
 
     console.print(get_usage_report())
-    return True
+    return
 
 
-def _handle_logs(args: argparse.Namespace) -> bool:
+def _handle_logs(args: argparse.Namespace) -> None:
     """Handle `standup logs` subcommand."""
     if args.clear:
         if not _confirm_action("Clear structured logs?"):
             console.print("[yellow]Log clear cancelled.[/yellow]")
-            return True
+            return
         if clear_logs():
             console.print("[green][+] Log file cleared.[/green]")
         else:
             console.print("[yellow][!]  Could not clear log file.[/yellow]")
-        return True
+        return
 
     entries = read_log_entries(args.tail)
     if not entries:
         console.print("[yellow]No structured logs found yet.[/yellow]")
-        return True
+        return
 
     table = Table(title="Standup Logs")
     table.add_column("Time", style="bold cyan")
@@ -608,10 +608,10 @@ def _handle_logs(args: argparse.Namespace) -> bool:
             ", ".join(detail_parts)[:120],
         )
     console.print(table)
-    return True
+    return
 
 
-def _handle_models(config: dict) -> bool:
+def _handle_models(config: dict) -> None:
     """Handle `standup models` subcommand."""
     from standup.llm.ollama_provider import OllamaProvider
 
@@ -625,10 +625,10 @@ def _handle_models(config: dict) -> bool:
         console.print(
             "[yellow]No models found. Is Ollama running?[/yellow]\n  Start it with: ollama serve\n  Pull a model:  ollama pull llama3"
         )
-    return True
+    return
 
 
-def _handle_templates_cmd(config: dict) -> bool:
+def _handle_templates_cmd(config: dict) -> None:
     """Handle `standup templates` subcommand."""
     from standup.templates import list_templates
 
@@ -640,10 +640,10 @@ def _handle_templates_cmd(config: dict) -> bool:
         template_type = "Custom" if name in config.get("custom_templates", {}) else "Built-in"
         table.add_row(name, template_type)
     console.print(table)
-    return True
+    return
 
 
-def _handle_history(args: argparse.Namespace) -> bool:
+def _handle_history(args: argparse.Namespace) -> None:
     """Handle `standup history` subcommand."""
     from standup.history import clear_history, get_history
 
@@ -651,16 +651,16 @@ def _handle_history(args: argparse.Namespace) -> bool:
         description = f"entries older than {args.days} days" if args.days else "all history entries"
         if not _confirm_action(f"Delete {description}?"):
             console.print("[yellow]History clear cancelled.[/yellow]")
-            return True
+            return
         deleted = clear_history(args.days)
         noun = "entry" if deleted == 1 else "entries"
         console.print(f"[green][+] Deleted {deleted} history {noun}.[/green]")
-        return True
+        return
 
     entries = get_history(args.limit)
     if not entries:
         console.print("[yellow]No standup history found yet.[/yellow]")
-        return True
+        return
 
     table = Table(title="Standup History")
     table.add_column("Date", style="bold cyan")
@@ -678,32 +678,32 @@ def _handle_history(args: argparse.Namespace) -> bool:
             preview,
         )
     console.print(table)
-    return True
+    return
 
 
-def _handle_warmup(args: argparse.Namespace, config: dict) -> bool:
+def _handle_warmup(args: argparse.Namespace, config: dict) -> None:
     """Handle `standup warm-up` subcommand."""
     from standup.llm.factory import get_provider_with_fallback
     from standup.warmup import warm_up_provider
 
     if args.install_startup:
         _install_startup(config)
-        return True
+        return
     if args.uninstall_startup:
         _uninstall_startup()
-        return True
+        return
 
     provider = get_provider_with_fallback(config, override=args.provider)  # type: ignore[assignment]
     success = warm_up_provider(provider, verbose=True)
     if not success:
         sys.exit(1)
-    return True
+    return
 
 
-def _handle_maintenance() -> bool:
+def _handle_maintenance() -> None:
     """Handle --maintenance flag."""
     _run_maintenance()
-    return True
+    return
 
 
 def _run_generation(args: argparse.Namespace, config: dict) -> None:

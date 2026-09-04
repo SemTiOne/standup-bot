@@ -1520,7 +1520,7 @@ def test_run_doctor_python_version_too_low(monkeypatch, tmp_path, capsys):
         return original_import_module(name)
 
     monkeypatch.setattr(importlib, "import_module", _safe_import_module)
-    monkeypatch.setattr(standup.security.sys, "version_info", low_version)
+    monkeypatch.setattr("sys.version_info", low_version)
 
     security_module.run_doctor()
     out = capsys.readouterr().out

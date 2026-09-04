@@ -6,7 +6,6 @@ lives in ``_redact``, ``_permissions`` and ``_keyring``.
 """
 
 import contextlib
-import sys  # noqa: F401 - keeps standup.security.sys working (doctor reads sys.version_info)
 
 from standup.logger import get_log_path, get_log_size_bytes, log_event  # noqa: F401
 from standup.security._keyring import (  # noqa: F401
