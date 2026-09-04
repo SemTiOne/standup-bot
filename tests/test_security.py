@@ -361,7 +361,7 @@ def test_write_text_restricted_locks_down_before_content_exists(tmp_path, monkey
         if file_path == str(target):
             assert Path(file_path).read_bytes() == b""
 
-    monkeypatch.setattr(security_module, "enforce_file_permissions", spy_enforce)
+    monkeypatch.setattr("standup.security._permissions.enforce_file_permissions", spy_enforce)
 
     real_write_bytes = Path.write_bytes
 
@@ -474,8 +474,8 @@ def test_sanitize_error_message_exception_in_formatting():
 def test_sanitize_error_message_empty_after_redaction(monkeypatch):
     import re
 
-    monkeypatch.setattr("standup.security._REDACTED", "")
-    monkeypatch.setattr("standup.security._ERROR_PATTERNS", [re.compile(r".*")])
+    monkeypatch.setattr("standup.security._redact._REDACTED", "")
+    monkeypatch.setattr("standup.security._redact._ERROR_PATTERNS", [re.compile(r".*")])
     msg = sanitize_error_message(Exception("any message"))
     assert msg == "An unexpected error occurred."
 

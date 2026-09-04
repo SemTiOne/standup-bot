@@ -68,6 +68,8 @@ def test_validator_is_single_source_of_truth():
     for file_path in pathlib.Path("standup").rglob("*.py"):
         if file_path.name in ("validator.py", "security.py"):
             continue
+        if file_path.parent.name == "security":
+            continue  # redaction regex lives in the security package by design
         source = file_path.read_text(encoding="utf-8")
         for index, line in enumerate(source.splitlines(), 1):
             if validation_pattern.search(line):
