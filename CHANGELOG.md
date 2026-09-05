@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   README descriptions and changelog formatting.
 
 ### Fixed
+- `standup/__init__.py`: sync `__version__` to `0.2.6` to match `setup.py`;
+  `standup --version` printed stale `0.2.4`.
 - `security.py`: suppressed CodeQL alert `py/clear-text-storage-sensitive-data`
   (alert #7) on `write_text_restricted()`. Content is now scanned with
   ``_detect_secrets()`` before every write; any matching secrets are scrubbed
