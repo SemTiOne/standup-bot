@@ -5,7 +5,7 @@ All notable changes to StandupBot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.7] - 2026-09-05
 
 ### Added
 - `.github/FUNDING.yml`: added GitHub Sponsors configuration.
@@ -13,6 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   GitHub Actions, grouped by ecosystem.
 - `.github/workflows/pr-review.yml`: added chess-review-bot workflow for
   automated PR reviews via `SemTiOne/chess-review-bot/action@v1`.
+- `standup/doctor.py`: extracted security and health checks from
+  `standup/security.py` (#20).
+- `standup/security/`: split `standup/security.py` into the `_redact`,
+  `_permissions`, and `_keyring` modules with full re-exports; no logic
+  changes (#21).
+- `tests/test_main_handlers.py`: Added — 37 tests covering subcommand
+  handlers, dispatch, and startup install/uninstall (#22).
+- `tests/test_main_e2e.py`: Added — happy-path generation test with a mocked
+  Groq provider (#21).
+- `.github/workflows/tests.yml`: test matrix across ubuntu/windows/macos x
+  Python 3.10-3.14 (15 jobs) with a `Required Checks` aggregator (#23).
+- `.github/workflows/dependabot-auto-merge.yml`: auto-merge green Dependabot
+  PRs (#23).
 
 ### Changed
 - `validator.py`, `README.md`, `CHANGELOG.md`: housekeeping pass from a full
@@ -104,6 +117,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   this changelog) from the initial commit onward and was never actually
   stripped by any prior commit despite the commit messages.
 - `setup.py`: added a missing trailing newline (ruff `W292`).
+- `requirements.txt`, `setup.py`: bump `cryptography` to `>=50.0.0,<51.0.0`
+  (`PYSEC-2026-3552`) (#20).
+- `standup/main.py`: split the `C901` entry point into 10 `_handle_*` dispatch
+  functions plus `_run_generation`; `main()` only parses and dispatches (#20).
+- `standup/main.py`: handler return type simplified from `bool` to `None`;
+  dropped the legacy `standup.security.sys` test path (#22).
+- `standup/history.py`: close SQLite connections via context manager (#20).
+- `standup/quality.py`: truncate scoring input to 2000 chars before prompt
+  formatting (#20).
+- `standup/git_reader.py`: log `git_diff_failed` instead of silent pass (#20).
+- `standup/main.py`: sanitize Slack error body before printing (#20).
+- `standup/security.py`: strict private-IPv4 octets plus IPv6 ULA redaction
+  (#20).
+- `standup/validator.py`: require Groq API key length of at least 40 (#20).
+- `tests/test_logger.py`: stop mutating global `os.name`; use a stub namespace
+  so the suite passes on Windows Python 3.10/3.11 (#23).
+- `.github/workflows/pr-review.yml`: strict review on critical paths (#23).
 
 ### Tests
 - `test_ollama_provider.py`: Added — `OllamaProvider.generate_standup` had no
@@ -195,6 +225,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `test_warmup.py`: Added `assert "standup standup" not in script` to both
   `test_get_warm_up_script_content_windows` and `test_get_warm_up_script_content_posix`
   to pin the corrected startup-script command and prevent regression.
+- `tests/test_main_handlers.py`: 37 handler, dispatch, and startup tests;
+  `main.py` coverage 44% to 72%, total project coverage 92% (#22).
 
 ### Infrastructure
 - `.gitattributes`: Added to enforce LF line endings across all text files. Without this,
