@@ -5,7 +5,7 @@ with open("README.md", encoding="utf-8") as file_handle:
 
 setup(
     name="standup-bot",
-    version="0.2.6",
+    version="0.2.7",
     description="Generate daily standup summaries from your git history using local or free cloud LLMs.",
     long_description=long_description,
     long_description_content_type="text/markdown",
