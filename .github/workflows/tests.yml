@@ -97,13 +97,14 @@ jobs:
         run: pre-commit run --all-files
 
   test:
-    name: Tests (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     needs: [lint, type-check, security-scan, dependency-audit, pre-commit]
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -130,3 +131,19 @@ jobs:
         uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  required-checks:
+    name: Required Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [lint, type-check, security-scan, dependency-audit, pre-commit, test]
+    if: always()
+    steps:
+      - name: Aggregate results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: >
+          python -c "import json, os, sys;
+          r = json.loads(os.environ['RESULTS']);
+          bad = [k for k, v in r.items() if v['result'] not in ('success', 'skipped')];
+          sys.exit('failed: ' + ','.join(bad)) if bad else print('all required checks passed')"

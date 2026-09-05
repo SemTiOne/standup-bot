@@ -33,6 +33,9 @@ jobs:
       - uses: SemTiOne/chess-review-bot/action@afb226eb18c737a45c3193059aa864b88591fb92
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          fail-on-blunder: 'false'
+          fail-on-blunder: 'true'
           critical-paths: |
             *security*
+            *config*
+            *validator*
+            *history*

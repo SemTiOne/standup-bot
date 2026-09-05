@@ -186,7 +186,9 @@ def test_get_logger_handler_creation_failure(monkeypatch, tmp_path):
 
 
 def test_enforce_permissions_oserror_returns_none(monkeypatch, tmp_path):
-    monkeypatch.setattr("standup.logger.os.name", "posix")
+    import types
+
+    monkeypatch.setattr(logger_module, "os", types.SimpleNamespace(name="posix"))
     test_file = tmp_path / "test.log"
     test_file.write_text("content")
 
