@@ -7,9 +7,9 @@ Generate standup updates from recent git activity with a local Ollama model or G
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-## What is new (unreleased)
+## What is new (0.2.7)
 
-Since 0.2.4: a full security/correctness audit (private-IP redaction, a config-mutation bug that could leak an API key across process calls, a broken Linux systemd unit, and a few other fixes), plus a follow-up fix for missing secret-detection patterns (GitHub tokens, AWS keys, Slack tokens, LLM API keys, credentialed URIs) reported via #2. See `CHANGELOG.md` for the full list.
+Since 0.2.6: handler tests (main.py coverage 44% to 72%), a `security/` package split with no logic changes, and CI across ubuntu/windows/macos. Since 0.2.4: a full security/correctness audit (private-IP redaction, a config-mutation bug that could leak an API key across process calls, a broken Linux systemd unit, and a few other fixes), plus a follow-up fix for missing secret-detection patterns (GitHub tokens, AWS keys, Slack tokens, LLM API keys, credentialed URIs) reported via #2. See `CHANGELOG.md` for the full list.
 
 ## Quick Start
 
