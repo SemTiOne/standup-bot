@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: SemTiOne/chess-review-bot/action@afb226eb18c737a45c3193059aa864b88591fb92
+      - uses: SemTiOne/chess-review-bot/action@4207cda3572dcd0a5fbd14481462a153d806c328
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on-blunder: 'true'
