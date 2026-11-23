@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
+      - uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec
 
   chess-review:
     runs-on: ubuntu-latest
@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: SemTiOne/chess-review-bot/action@afb226eb18c737a45c3193059aa864b88591fb92
+      - uses: SemTiOne/chess-review-bot/action@4207cda3572dcd0a5fbd14481462a153d806c328
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on-blunder: 'true'
